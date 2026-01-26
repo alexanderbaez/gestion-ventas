@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SGV PRO - Gestión de Ventas</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        :root { --primary-color: #db2777; --bg-light: #f8f9fa; }
+        body { background-color: var(--bg-light); font-family: 'Inter', sans-serif; overflow-x: hidden; }
+        .navbar { background: white; box-shadow: 0 2px 15px rgba(0,0,0,0.05); }
+        .nav-link { font-weight: 600; color: #666; cursor: pointer; border-bottom: 3px solid transparent; }
+        .nav-link.active { color: var(--primary-color) !important; border-bottom-color: var(--primary-color); }
+        .section { display: none; padding: 20px 0; }
+        .section.active { display: block; }
+        .card { border: none; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); margin-bottom: 1rem; }
+        .stat-card { transition: 0.3s; }
+        .stat-card:hover { transform: translateY(-5px); }
+        .info-box { background: #f1f3f5; border-radius: 10px; padding: 10px; border: 1px solid #dee2e6; }
+
+        /* Estilos de Stock */
+        .stock-critical { background-color: #dc2626 !important; color: white !important; font-weight: bold; }
+        .stock-warning { background-color: #d97706 !important; color: white !important; font-weight: bold; }
+        .fila-critica { background-color: #fee2e2 !important; }
+        .fila-advertencia { background-color: #ffedd5 !important; }
+
+        /* Buscadores */
+        .search-group { position: relative; }
+        .search-group .bi-search { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #aaa; }
+        .search-input { padding-left: 40px !important; border-radius: 10px !important; border: 1px solid #ddd; }
+
+        .btn-action { width: 35px; height: 35px; display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; transition: 0.2s; border: 1px solid #eee; background: white; }
+        .btn-action:hover { transform: scale(1.1); box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .btn-edit { color: #0d6efd; }
+        .btn-delete { color: #dc3545; }
+
+        @media (max-width: 768px) {
+            .navbar-brand { font-size: 1.2rem; }
+            h2 { font-size: 1.5rem; }
+            .table-responsive { font-size: 0.75rem; }
+            .badge { font-size: 0.7rem; }
+        }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg sticky-top navbar-light">
+    <div class="container">
+        <a class="navbar-brand fw-bold text-uppercase" style="color: var(--primary-color);">💎 SGV PRO</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto gap-2 mt-3 mt-lg-0 text-center">
+                <li class="nav-item"><a class="nav-link active" id="link-inicio" onclick="showSection('inicio')">Inicio</a></li>
+                <li class="nav-item"><a class="nav-link" id="link-inventario" onclick="showSection('inventario')">Inventario</a></li>
+                <li class="nav-item"><a class="nav-link" id="link-historial" onclick="showSection('historial')">Historial</a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container mt-3">
+    <section id="inicio" class="section active">
+        <div class="row g-3 mb-3">
+            <div class="col-6">
+                <div class="card stat-card p-3 p-md-4 bg-white border-start border-success border-5 h-100">
+                    <span class="text-muted small fw-bold text-uppercase">Ganancia</span>
+                    <h2 id="total-profit" class="text-success fw-bold mb-0">$0</h2>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="card stat-card p-3 p-md-4 bg-white border-start border-primary border-5 h-100">
+                    <span class="text-muted small fw-bold text-uppercase">Capital</span>
+                    <h2 id="total-reinvestment" class="text-primary fw-bold mb-0">$0</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="card p-4">
+            <h5 class="fw-bold mb-3"><i class="bi bi-cart-plus me-2"></i>Nueva Venta</h5>
+            <form id="saleForm">
+                <div class="row g-2">
+                    <div class="col-12 col-md-7">
+                        <div class="search-group mb-2">
+                            <i class="bi bi-search"></i>
+                            <input type="text" id="saleSearchProduct" class="form-control search-input" placeholder="Buscar producto para vender..." onkeyup="filterSaleSelect()">
+                        </div>
+                        <select id="productSelect" class="form-select form-select-lg" size="5" required style="max-height: 160px;"></select>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <input type="number" id="quantity" class="form-control form-select-lg" placeholder="Cant." min="1" required>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <button type="submit" class="btn btn-primary btn-lg w-100 fw-bold" style="height: 48px;">VENDER</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <section id="inventario" class="section">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-3 gap-3">
+            <h4 class="fw-bold mb-0">Gestión de Stock</h4>
+            <button class="btn btn-dark fw-bold w-100 w-md-auto" onclick="openCreateModal()">+ AGREGAR PRODUCTO</button>
+        </div>
+
+        <div class="search-group mb-3">
+            <i class="bi bi-search"></i>
+            <input type="text" id="searchInventory" class="form-control search-input" placeholder="Buscar en inventario..." onkeyup="filterInventory()">
+        </div>
+
+        <div class="card p-0 overflow-hidden shadow-sm">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle text-center">
+                    <thead class="table-dark">
+                    <tr class="small">
+                        <th class="ps-4 text-start">PRODUCTO</th>
+                        <th>STOCK</th>
+                        <th>C. PACK</th>
+                        <th>UNID.</th>
+                        <th>C. UNIT</th>
+                        <th>MARGEN</th>
+                        <th>VENTA</th>
+                        <th class="text-end pe-4">ACCIONES</th>
+                    </tr>
+                    </thead>
+                    <tbody id="inventoryTableBody" class="small"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <section id="historial" class="section">
+        <div class="card p-4 mb-4">
+            <div class="row g-3 align-items-end">
+                <div class="col-12 col-md-4">
+                    <label class="form-label small fw-bold">Filtrar por Fecha</label>
+                    <input type="date" id="filterDate" class="form-control" onchange="loadSales()">
+                </div>
+                <div class="col-12 col-md-6">
+                    <label class="form-label small fw-bold">Buscar Producto en Ventas</label>
+                    <div class="search-group">
+                        <i class="bi bi-search"></i>
+                        <input type="text" id="searchSales" class="form-control search-input" placeholder="Nombre del producto..." onkeyup="filterSales()">
+                    </div>
+                </div>
+                <div class="col-12 col-md-2">
+                    <button class="btn btn-outline-secondary w-100 fw-bold" onclick="clearSalesFilters()">Limpiar</button>
+                </div>
+            </div>
+        </div>
+        <div class="card p-0 overflow-hidden shadow-sm">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                    <tr>
+                        <th class="ps-4 text-start">Fecha</th>
+                        <th class="text-start">Producto</th>
+                        <th>Cant.</th>
+                        <th>Ganancia</th>
+                        <th class="text-end pe-4">Acción</th>
+                    </tr>
+                    </thead>
+                    <tbody id="salesTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</div>
+
+<div class="modal fade" id="modalProducto" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold" id="modalTitle">Producto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="productForm">
+                    <input type="hidden" id="p-id">
+                    <div class="mb-3"><label class="form-label small fw-bold">Nombre</label><input type="text" id="p-name" class="form-control" required></div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6"><label class="form-label small fw-bold">Costo Pack</label><input type="number" id="p-packCost" class="form-control" step="0.01" required></div>
+                        <div class="col-6"><label class="form-label small fw-bold">Unidades por Pack</label><input type="number" id="p-units" class="form-control" required></div>
+                    </div>
+                    <div class="info-box mb-3 text-center"><small class="text-muted d-block">COSTO UNITARIO CALCULADO</small><span id="live-unit-cost" class="fw-bold h5 text-dark">$0.00</span></div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6"><label class="form-label small fw-bold text-success">% Margen de Ganancia</label><input type="number" id="p-margin" class="form-control" value="50" step="0.1"></div>
+                        <div class="col-6"><label class="form-label small fw-bold text-danger">Stock Actual</label><input type="number" id="p-stock" class="form-control" required></div>
+                    </div>
+                    <div class="p-3 bg-success-subtle border border-success rounded text-center mb-3"><small class="text-success fw-bold d-block">PRECIO VENTA FINAL</small><span id="live-sale-price" class="fw-bold h4 text-success">$0.00</span></div>
+                    <button type="submit" class="btn btn-primary w-100 btn-lg fw-bold">GUARDAR PRODUCTO</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="confirmModal" tabindex="-1">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg text-center" style="border-radius: 20px;">
+            <div class="modal-body p-4">
+                <div class="mb-3"><i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3rem;"></i></div>
+                <h5 class="fw-bold">¿Confirmar Acción?</h5>
+                <p class="text-muted small" id="confirmText"></p>
+                <div class="d-grid gap-2 mt-4">
+                    <button type="button" class="btn btn-danger fw-bold btn-lg" id="btnConfirmDelete">ACEPTAR</button>
+                    <button type="button" class="btn btn-light fw-bold" data-bs-dismiss="modal">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="index.js"></script>
+</body>
+</html>
