@@ -1,7 +1,5 @@
-// Si la página detecta que está en Render, usa la URL de Render. Si no, usa localhost.
-const API_URL = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
-    ? "http://localhost:8080/api"
-    : "/api";
+// Al NO poner "http://...", el navegador usará automáticamente el dominio donde estés.
+const API_URL = "/api";
 let myModal, confirmModal;
 let deleteTarget = { id: null, type: null };
 
