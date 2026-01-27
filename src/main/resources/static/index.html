@@ -21,31 +21,30 @@
         .stat-card:hover { transform: translateY(-5px); }
         .info-box { background: #f1f3f5; border-radius: 10px; padding: 10px; border: 1px solid #dee2e6; }
 
-        /* Estilos de Stock */
+        /* Stock Status */
         .stock-critical { background-color: #dc2626 !important; color: white !important; font-weight: bold; }
         .stock-warning { background-color: #d97706 !important; color: white !important; font-weight: bold; }
         .fila-critica { background-color: #fee2e2 !important; }
         .fila-advertencia { background-color: #ffedd5 !important; }
 
-        /* Buscador Moderno */
+        /* Buscador Moderno & Mobile Friendly */
         .search-group { position: relative; }
         .search-group .bi-search { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #aaa; z-index: 5; }
-        .search-input { padding-left: 40px !important; border-radius: 10px !important; border: 1px solid #ddd; height: 48px; }
+        .search-input { padding-left: 40px !important; border-radius: 10px !important; border: 1px solid #ddd; height: 50px; font-size: 16px !important; } /* 16px evita el zoom automático en iPhone */
 
-        #productResults { top: 100%; left: 0; border-radius: 12px; overflow: hidden; border: 1px solid #eee; z-index: 1050; }
-        .list-group-item-action { cursor: pointer; border: none; padding: 12px 15px; }
-        .list-group-item-action:hover { background-color: #fce7f3; }
+        #productResults { top: 55px; left: 0; border-radius: 12px; overflow: hidden; border: 1px solid #ddd; z-index: 2000; width: 100%; background: white; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .list-group-item-action { cursor: pointer; border: none; padding: 15px; border-bottom: 1px solid #eee; -webkit-tap-highlight-color: transparent; }
+        .list-group-item-action:active { background-color: #fce7f3; }
 
-        .btn-action { width: 35px; height: 35px; display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; transition: 0.2s; border: 1px solid #eee; background: white; }
-        .btn-action:hover { transform: scale(1.1); box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .btn-action { width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; transition: 0.2s; border: 1px solid #eee; background: white; }
         .btn-edit { color: #0d6efd; }
         .btn-delete { color: #dc3545; }
 
         @media (max-width: 768px) {
             .navbar-brand { font-size: 1.2rem; }
             h2 { font-size: 1.5rem; }
-            .table-responsive { font-size: 0.75rem; }
-            .btn-lg { font-size: 1rem; height: 48px; }
+            .table-responsive { font-size: 0.8rem; }
+            .btn-lg { font-size: 1rem; height: 50px; }
         }
     </style>
 </head>
@@ -69,42 +68,42 @@
 
 <div class="container mt-3">
     <section id="inicio" class="section active">
-        <div class="row g-3 mb-3">
+        <div class="row g-3 mb-3 text-center">
             <div class="col-6">
-                <div class="card stat-card p-3 p-md-4 bg-white border-start border-success border-5 h-100">
+                <div class="card stat-card p-3 bg-white border-start border-success border-5 h-100">
                     <span class="text-muted small fw-bold text-uppercase">Ganancia</span>
                     <h2 id="total-profit" class="text-success fw-bold mb-0">$0</h2>
                 </div>
             </div>
             <div class="col-6">
-                <div class="card stat-card p-3 p-md-4 bg-white border-start border-primary border-5 h-100">
+                <div class="card stat-card p-3 bg-white border-start border-primary border-5 h-100">
                     <span class="text-muted small fw-bold text-uppercase">Capital</span>
                     <h2 id="total-reinvestment" class="text-primary fw-bold mb-0">$0</h2>
                 </div>
             </div>
         </div>
 
-        <div class="card p-4 position-relative">
+        <div class="card p-4">
             <h5 class="fw-bold mb-3"><i class="bi bi-cart-plus me-2"></i>Nueva Venta</h5>
             <form id="saleForm">
                 <div class="row g-2">
                     <div class="col-12 col-md-8 position-relative">
                         <div class="search-group">
                             <i class="bi bi-search"></i>
-                            <input type="text" id="saleSearchProduct" class="form-control search-input" placeholder="Buscar producto..." onkeyup="filterSaleSelect()" autocomplete="off">
+                            <input type="text" id="saleSearchProduct" class="form-control search-input" placeholder="Escribe el nombre del producto..." autocomplete="off">
                         </div>
-                        <div id="productResults" class="list-group shadow position-absolute w-100 d-none" style="max-height: 250px; overflow-y: auto;"></div>
+                        <div id="productResults" class="list-group d-none shadow position-absolute"></div>
                         <input type="hidden" id="productSelect">
                     </div>
                     <div class="col-6 col-md-2">
-                        <input type="number" id="quantity" class="form-control form-control-lg text-center" placeholder="Cant." min="1" required style="height: 48px;">
+                        <input type="number" id="quantity" class="form-control form-control-lg text-center" placeholder="Cant." min="1" required style="height: 50px;">
                     </div>
                     <div class="col-6 col-md-2">
                         <button type="submit" class="btn btn-primary btn-lg w-100 fw-bold">VENDER</button>
                     </div>
                 </div>
-                <div id="selectedProductLabel" class="mt-2 small text-muted fw-bold d-none">
-                    Seleccionado: <span class="text-primary" id="currentSelectionName"></span>
+                <div id="selectedProductLabel" class="mt-3 p-2 bg-light rounded border d-none">
+                    <small class="text-muted">Seleccionado:</small> <span class="text-primary fw-bold" id="currentSelectionName"></span>
                 </div>
             </form>
         </div>
@@ -112,12 +111,12 @@
 
     <section id="inventario" class="section">
         <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-3 gap-3">
-            <h4 class="fw-bold mb-0">Gestión de Stock</h4>
-            <button class="btn btn-dark fw-bold w-100 w-md-auto" onclick="openCreateModal()">+ AGREGAR PRODUCTO</button>
+            <h4 class="fw-bold mb-0">Inventario Real</h4>
+            <button class="btn btn-dark fw-bold w-100 w-md-auto" onclick="openCreateModal()">+ NUEVO PRODUCTO</button>
         </div>
         <div class="search-group mb-3">
             <i class="bi bi-search"></i>
-            <input type="text" id="searchInventory" class="form-control search-input" placeholder="Buscar en inventario..." onkeyup="filterInventory()">
+            <input type="text" id="searchInventory" class="form-control search-input" placeholder="Filtrar inventario...">
         </div>
         <div class="card p-0 overflow-hidden shadow-sm">
             <div class="table-responsive">
@@ -126,36 +125,26 @@
                     <tr class="small">
                         <th class="ps-4 text-start">PRODUCTO</th>
                         <th>STOCK</th>
-                        <th>C. PACK</th>
-                        <th>UNID.</th>
-                        <th>C. UNIT</th>
-                        <th>MARGEN</th>
-                        <th>VENTA</th>
+                        <th>PRECIO VENTA</th>
                         <th class="text-end pe-4">ACCIONES</th>
                     </tr>
                     </thead>
-                    <tbody id="inventoryTableBody" class="small"></tbody>
+                    <tbody id="inventoryTableBody"></tbody>
                 </table>
             </div>
         </div>
     </section>
 
     <section id="historial" class="section">
-        <div class="card p-4 mb-4">
-            <div class="row g-3 align-items-end">
-                <div class="col-12 col-md-4">
-                    <label class="form-label small fw-bold">Filtrar por Fecha</label>
-                    <input type="date" id="filterDate" class="form-control" onchange="loadSales()">
+        <div class="card p-4 mb-3">
+            <div class="row g-3">
+                <div class="col-6">
+                    <label class="form-label small fw-bold">Fecha</label>
+                    <input type="date" id="filterDate" class="form-control">
                 </div>
-                <div class="col-12 col-md-6">
-                    <label class="form-label small fw-bold">Buscar Producto en Ventas</label>
-                    <div class="search-group">
-                        <i class="bi bi-search"></i>
-                        <input type="text" id="searchSales" class="form-control search-input" placeholder="Nombre del producto..." onkeyup="filterSales()">
-                    </div>
-                </div>
-                <div class="col-12 col-md-2">
-                    <button class="btn btn-outline-secondary w-100 fw-bold" onclick="clearSalesFilters()">Limpiar</button>
+                <div class="col-6">
+                    <label class="form-label small fw-bold">Producto</label>
+                    <input type="text" id="searchSales" class="form-control" placeholder="Buscar...">
                 </div>
             </div>
         </div>
@@ -163,15 +152,15 @@
             <div class="table-responsive">
                 <table class="table table-hover mb-0">
                     <thead class="table-light">
-                    <tr>
-                        <th class="ps-4 text-start">Fecha</th>
-                        <th class="text-start">Producto</th>
+                    <tr class="small">
+                        <th class="ps-4">Fecha</th>
+                        <th>Producto</th>
                         <th>Cant.</th>
                         <th>Ganancia</th>
-                        <th class="text-end pe-4">Acción</th>
+                        <th class="text-end pe-4">Borrar</th>
                     </tr>
                     </thead>
-                    <tbody id="salesTableBody"></tbody>
+                    <tbody id="salesTableBody" class="small"></tbody>
                 </table>
             </div>
         </div>
@@ -180,26 +169,28 @@
 
 <div class="modal fade" id="modalProducto" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+        <div class="modal-content" style="border-radius: 20px;">
             <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold" id="modalTitle">Producto</h5>
+                <h5 class="modal-title fw-bold" id="modalTitle">Detalle Producto</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
                 <form id="productForm">
                     <input type="hidden" id="p-id">
-                    <div class="mb-3"><label class="form-label small fw-bold">Nombre</label><input type="text" id="p-name" class="form-control" required></div>
-                    <div class="row g-3 mb-3">
+                    <div class="mb-3"><label class="form-label small fw-bold">Nombre del Producto</label><input type="text" id="p-name" class="form-control" required></div>
+                    <div class="row g-2 mb-3">
                         <div class="col-6"><label class="form-label small fw-bold">Costo Pack</label><input type="number" id="p-packCost" class="form-control" step="0.01" required></div>
-                        <div class="col-6"><label class="form-label small fw-bold">Unidades por Pack</label><input type="number" id="p-units" class="form-control" required></div>
+                        <div class="col-6"><label class="form-label small fw-bold">Unidades</label><input type="number" id="p-units" class="form-control" required></div>
                     </div>
-                    <div class="info-box mb-3 text-center"><small class="text-muted d-block">COSTO UNITARIO CALCULADO</small><span id="live-unit-cost" class="fw-bold h5 text-dark">$0.00</span></div>
-                    <div class="row g-3 mb-3">
-                        <div class="col-6"><label class="form-label small fw-bold text-success">% Margen de Ganancia</label><input type="number" id="p-margin" class="form-control" value="50" step="0.1"></div>
-                        <div class="col-6"><label class="form-label small fw-bold text-danger">Stock Actual</label><input type="number" id="p-stock" class="form-control" required></div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6"><label class="form-label small fw-bold text-success">% Margen</label><input type="number" id="p-margin" class="form-control" value="50"></div>
+                        <div class="col-6"><label class="form-label small fw-bold text-danger">Stock</label><input type="number" id="p-stock" class="form-control" required></div>
                     </div>
-                    <div class="p-3 bg-success-subtle border border-success rounded text-center mb-3"><small class="text-success fw-bold d-block">PRECIO VENTA FINAL</small><span id="live-sale-price" class="fw-bold h4 text-success">$0.00</span></div>
-                    <button type="submit" class="btn btn-primary w-100 btn-lg fw-bold">GUARDAR PRODUCTO</button>
+                    <div class="p-3 bg-light rounded text-center border mb-3">
+                        <small class="text-muted d-block">PRECIO DE VENTA SUGERIDO</small>
+                        <span id="live-sale-price" class="fw-bold h4 text-success">$0.00</span>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 btn-lg fw-bold">GUARDAR</button>
                 </form>
             </div>
         </div>
@@ -208,13 +199,12 @@
 
 <div class="modal fade" id="confirmModal" tabindex="-1">
     <div class="modal-dialog modal-sm modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg text-center" style="border-radius: 20px;">
+        <div class="modal-content border-0 shadow text-center" style="border-radius: 20px;">
             <div class="modal-body p-4">
-                <div class="mb-3"><i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3rem;"></i></div>
-                <h5 class="fw-bold">¿Confirmar Acción?</h5>
+                <h5 class="fw-bold">¿Seguro?</h5>
                 <p class="text-muted small" id="confirmText"></p>
                 <div class="d-grid gap-2 mt-4">
-                    <button type="button" class="btn btn-danger fw-bold btn-lg" id="btnConfirmDelete">ACEPTAR</button>
+                    <button type="button" class="btn btn-danger fw-bold" id="btnConfirmDelete">ELIMINAR</button>
                     <button type="button" class="btn btn-light fw-bold" data-bs-dismiss="modal">Cancelar</button>
                 </div>
             </div>
