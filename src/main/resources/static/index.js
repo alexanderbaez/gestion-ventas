@@ -89,24 +89,44 @@ function renderTable() {
     const table = document.getElementById("inventoryTableBody");
     table.innerHTML = "";
     allProducts.forEach(p => {
+        // Definimos las alertas de stock
         const rowClass = p.currentStock <= 2 ? "fila-critica" : (p.currentStock <= 5 ? "fila-advertencia" : "");
         const badgeClass = p.currentStock <= 2 ? "stock-critical" : (p.currentStock <= 5 ? "stock-warning" : "bg-light text-dark");
 
-        // Lógica para mostrar precio mayorista formateado
-        const wholesaleDisplay = (p.wholesalePrice && p.wholesalePrice > 0)
-            ? `<div><span class="txt-mayorista">$${p.wholesalePrice.toFixed(0)}</span><br><span class="badge-mayorista">Mín: ${p.wholesaleQuantityThreshold} u.</span></div>`
-            : `<span class="text-muted small">N/A</span>`;
+        // LÓGICA DE PRECIO MAYORISTA:
+        // Si el precio existe y es mayor a 0, lo mostramos en AZUL. Si no, avisamos que no tiene.
+        const tieneMayorista = p.wholesalePrice && p.wholesalePrice > 0;
+        const wholesaleHTML = tieneMayorista
+            ? `<div class="fw-bold" style="color: #0ea5e9;">$${p.wholesalePrice.toFixed(2)}</div>
+               <small class="text-muted" style="font-size: 0.7rem;">Llevando ${p.wholesaleQuantityThreshold}+ u.</small>`
+            : `<span class="text-muted" style="font-size: 0.8rem;">Sin precio x mayor</span>`;
 
         table.innerHTML += `
             <tr class="${rowClass}">
-                <td class="ps-4 text-start fw-bold">${p.name}</td>
-                <td><span class="badge ${badgeClass}">${p.currentStock}</span></td>
-                <td><span class="txt-minorista">$${p.finalSalesPrice.toFixed(0)}</span></td>
-                <td>${wholesaleDisplay}</td>
+                <td class="ps-4 text-start">
+                    <div class="fw-bold" style="color: #334155;">${p.name}</div>
+                    <small class="text-muted">Ref: #${p.id}</small>
+                </td>
+                <td>
+                    <span class="badge ${badgeClass}" style="padding: 8px 12px; border-radius: 8px;">
+                        ${p.currentStock}
+                    </span>
+                </td>
+                <td>
+                    <div class="fw-bold" style="color: #db2777;">$${p.finalSalesPrice.toFixed(2)}</div>
+                    <small class="text-muted" style="font-size: 0.7rem;">Minorista</small>
+                </td>
+                <td>
+                    ${wholesaleHTML}
+                </td>
                 <td class="text-end pe-4">
                     <div class="d-flex justify-content-end gap-2">
-                        <button class="btn-action btn-edit" onclick='editProduct(${JSON.stringify(p)})'><i class="bi bi-pencil"></i></button>
-                        <button class="btn-action btn-delete" onclick="askDelete(${p.id}, 'product')"><i class="bi bi-trash"></i></button>
+                        <button class="btn-action btn-edit" onclick='editProduct(${JSON.stringify(p)})'>
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn-action btn-delete" onclick="askDelete(${p.id}, 'product')">
+                            <i class="bi bi-trash"></i>
+                        </button>
                     </div>
                 </td>
             </tr>`;
