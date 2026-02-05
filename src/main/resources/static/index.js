@@ -7,11 +7,9 @@ document.addEventListener("DOMContentLoaded", () => {
     myModal = new bootstrap.Modal(document.getElementById('modalProducto'));
     confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
 
-    // CARGA INICIAL
     loadProducts();
     loadSales();
 
-    // EVENTOS DE BÚSQUEDA
     const searchInput = document.getElementById("saleSearchProduct");
     searchInput.addEventListener("input", filterSaleResults);
 
@@ -23,13 +21,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById("filterDate").addEventListener("change", loadSales);
 
-    // FORMULARIOS Y CÁLCULOS
     const productInputs = ["p-packCost", "p-units", "p-margin"];
     productInputs.forEach(id => document.getElementById(id).addEventListener("input", liveCalc));
 
     document.getElementById("btnConfirmDelete").addEventListener("click", executeDelete);
 
-    // CERRAR RESULTADOS SI SE TOCA AFUERA
     document.addEventListener("click", (e) => {
         if (!e.target.closest(".search-group")) {
             document.getElementById("productResults").classList.add("d-none");
@@ -37,7 +33,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 
-// --- LÓGICA DEL BUSCADOR ---
 function filterSaleResults() {
     const query = document.getElementById("saleSearchProduct").value.toLowerCase();
     const resultsDiv = document.getElementById("productResults");
@@ -81,7 +76,6 @@ function selectProduct(p) {
     document.getElementById("currentSelectionName").innerText = `${p.name} ($${p.finalSalesPrice})`;
 }
 
-// --- CRUD PRODUCTOS ---
 async function loadProducts() {
     try {
         const res = await fetch(`${API_URL}/products`);
@@ -90,6 +84,7 @@ async function loadProducts() {
     } catch (e) { console.error("Error cargando productos", e); }
 }
 
+// CORRECCIÓN VISUAL DE LA TABLA
 function renderTable() {
     const table = document.getElementById("inventoryTableBody");
     table.innerHTML = "";
@@ -97,11 +92,17 @@ function renderTable() {
         const rowClass = p.currentStock <= 2 ? "fila-critica" : (p.currentStock <= 5 ? "fila-advertencia" : "");
         const badgeClass = p.currentStock <= 2 ? "stock-critical" : (p.currentStock <= 5 ? "stock-warning" : "bg-light text-dark");
 
+        // Lógica para mostrar precio mayorista formateado
+        const wholesaleDisplay = (p.wholesalePrice && p.wholesalePrice > 0)
+            ? `<div><span class="txt-mayorista">$${p.wholesalePrice.toFixed(0)}</span><br><span class="badge-mayorista">Mín: ${p.wholesaleQuantityThreshold} u.</span></div>`
+            : `<span class="text-muted small">N/A</span>`;
+
         table.innerHTML += `
             <tr class="${rowClass}">
                 <td class="ps-4 text-start fw-bold">${p.name}</td>
                 <td><span class="badge ${badgeClass}">${p.currentStock}</span></td>
-                <td class="fw-bold text-primary">$${p.finalSalesPrice.toFixed(2)}</td>
+                <td><span class="txt-minorista">$${p.finalSalesPrice.toFixed(0)}</span></td>
+                <td>${wholesaleDisplay}</td>
                 <td class="text-end pe-4">
                     <div class="d-flex justify-content-end gap-2">
                         <button class="btn-action btn-edit" onclick='editProduct(${JSON.stringify(p)})'><i class="bi bi-pencil"></i></button>
@@ -121,7 +122,6 @@ function liveCalc() {
     document.getElementById("live-sale-price").innerText = `$${price.toFixed(2)}`;
 }
 
-// --- GESTIÓN DE VENTAS ---
 document.getElementById("saleForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const productId = document.getElementById("productSelect").value;
@@ -180,7 +180,6 @@ async function loadSales() {
     } catch (e) { console.error(e); }
 }
 
-// --- AUXILIARES ---
 function filterInventory() {
     const q = document.getElementById("searchInventory").value.toLowerCase();
     const rows = document.querySelectorAll("#inventoryTableBody tr");
@@ -215,7 +214,6 @@ function editProduct(p) {
     document.getElementById("p-units").value = p.unitsPerPack;
     document.getElementById("p-margin").value = p.profitMarginPercentage;
     document.getElementById("p-stock").value = p.currentStock;
-    // Campos Mayoristas
     document.getElementById("p-wholesalePrice").value = p.wholesalePrice || "";
     document.getElementById("p-wholesaleThreshold").value = p.wholesaleQuantityThreshold || "";
 
@@ -234,7 +232,6 @@ document.getElementById("productForm").addEventListener("submit", async (e) => {
         unitsPerPack: parseInt(document.getElementById("p-units").value),
         profitMarginPercentage: parseFloat(document.getElementById("p-margin").value),
         currentStock: parseInt(document.getElementById("p-stock").value),
-        // Nuevos campos mayoristas
         wholesalePrice: parseFloat(document.getElementById("p-wholesalePrice").value) || null,
         wholesaleQuantityThreshold: parseInt(document.getElementById("p-wholesaleThreshold").value) || null
     };
