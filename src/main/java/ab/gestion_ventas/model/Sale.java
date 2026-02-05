@@ -22,31 +22,21 @@ public class Sale {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne // Muchas ventas pueden pertenecer a un mismo producto
+    @ManyToOne
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
     private Integer quantity;
-
-    private BigDecimal totalSaleAmount; // Precio final x cantidad
-    private BigDecimal totalProfit;     // Ganancia neta total de esta venta
-    private BigDecimal totalReinvestment; // Lo que hay que separar para volver a comprar
+    private BigDecimal appliedPrice; // Precio unitario real aplicado (Sea minorista o mayorista)
+    private BigDecimal totalSaleAmount;
+    private BigDecimal totalProfit;
+    private BigDecimal totalReinvestment;
+    private Boolean isWholesale; // Para saber en el historial si fue por mayor
 
     private LocalDateTime saleDate;
 
     @PrePersist
-    public void calculateSaleData() {
+    public void initDate() {
         this.saleDate = LocalDateTime.now();
-
-        if (product != null && quantity != null) {
-            // Monto total cobrado al cliente
-            this.totalSaleAmount = product.getFinalSalesPrice().multiply(BigDecimal.valueOf(quantity));
-
-            // Lo que costó el producto (Reinversión)
-            this.totalReinvestment = product.getUnitCost().multiply(BigDecimal.valueOf(quantity));
-
-            // La ganancia real
-            this.totalProfit = this.totalSaleAmount.subtract(this.totalReinvestment);
-        }
     }
 }

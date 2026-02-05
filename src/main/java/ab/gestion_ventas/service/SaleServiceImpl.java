@@ -23,41 +23,42 @@ public class SaleServiceImpl implements SaleService {
     @Override
     @Transactional
     public Sale createSale(Sale sale) {
-        // 1. Buscar el producto real en la DB
         Product product = productRepository.findById(sale.getProduct().getId())
                 .orElseThrow(() -> new RuntimeException("Product not found"));
 
-        // 2. Validar si hay stock suficiente
         if (product.getCurrentStock() < sale.getQuantity()) {
-            throw new RuntimeException("Insufficient stock for product: " + product.getName());
+            throw new RuntimeException("Stock insuficiente");
         }
 
-        // 3. Lógica de Precio Mayorista vs Minorista
-        // Si el producto tiene precio mayorista y la cantidad supera el umbral, aplicamos ese precio.
-        BigDecimal unitPriceToApply = product.getFinalSalesPrice();
+        // 1. Decidir qué precio aplicar
+        BigDecimal unitPrice = product.getFinalSalesPrice();
+        boolean wholesaleApplied = false;
 
         if (product.getWholesalePrice() != null &&
                 product.getWholesaleQuantityThreshold() != null &&
                 sale.getQuantity() >= product.getWholesaleQuantityThreshold()) {
 
-            unitPriceToApply = product.getWholesalePrice();
+            unitPrice = product.getWholesalePrice();
+            wholesaleApplied = true;
         }
 
-        // 4. Descontar el stock
+        // 2. Calcular montos
+        BigDecimal totalAmount = unitPrice.multiply(BigDecimal.valueOf(sale.getQuantity()));
+        BigDecimal costAmount = product.getUnitCost().multiply(BigDecimal.valueOf(sale.getQuantity()));
+        BigDecimal profitAmount = totalAmount.subtract(costAmount);
+
+        // 3. Seteamos los datos en el objeto Sale
+        sale.setProduct(product);
+        sale.setAppliedPrice(unitPrice);
+        sale.setTotalSaleAmount(totalAmount);
+        sale.setTotalReinvestment(costAmount);
+        sale.setTotalProfit(profitAmount);
+        sale.setIsWholesale(wholesaleApplied);
+
+        // 4. Descontar stock y guardar
         product.setCurrentStock(product.getCurrentStock() - sale.getQuantity());
         productRepository.save(product);
 
-        // 5. Preparar los datos de la venta
-        sale.setProduct(product);
-
-        /* Nota: Aunque Sale tiene @PrePersist, recalculamos aquí o nos aseguramos
-           de que el precio aplicado sea el correcto según la lógica mayorista.
-           Seteamos el total usando el precio que decidimos arriba.
-        */
-        BigDecimal totalAmount = unitPriceToApply.multiply(BigDecimal.valueOf(sale.getQuantity()));
-        sale.setTotalSaleAmount(totalAmount);
-
-        // 6. Guardar la venta
         return saleRepository.save(sale);
     }
 
