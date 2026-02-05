@@ -1,6 +1,5 @@
 package ab.gestion_ventas.model;
 
-
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -27,38 +26,47 @@ public class Product {
     @NotBlank
     private String name;
     private String description;
+
     @PositiveOrZero
     private Integer currentStock;
 
-    //pack logic
+    // --- Pack Logic ---
     private BigDecimal packCost;
     private Integer unitsPerPack;
     private BigDecimal unitCost;
 
-    // --- Sales Logic ---
+    // --- Sales Logic (Minorista) ---
     private Double profitMarginPercentage; // Ej: 50.0
-    private BigDecimal suggestedSalesPrice; // Calculated
-    private BigDecimal finalSalesPrice; // Manual or Suggesed
+    private BigDecimal suggestedSalesPrice; // Calculado
+    private BigDecimal finalSalesPrice; // Manual o Sugerido
     private Boolean useManualPrice;
+
+    // --- Wholesale Logic (Mayorista / Emprendedores) ---
+    private BigDecimal wholesalePrice; // Precio por unidad para mayoristas
+    private Integer wholesaleQuantityThreshold; // Cantidad mínima para aplicar este precio (Ej: 6 unidades)
 
     @PrePersist
     @PreUpdate
     public void calculatePrices() {
-        // 1. Calculate Unit Cost
+        // 1. Calcular Costo Unitario
         if (packCost != null && unitsPerPack != null && unitsPerPack > 0) {
             this.unitCost = packCost.divide(BigDecimal.valueOf(unitsPerPack), 2, RoundingMode.HALF_UP);
         }
 
-        // 2. Calculate Suggested Price
+        // 2. Calcular Precio Sugerido (Minorista)
         if (unitCost != null && profitMarginPercentage != null) {
             BigDecimal margin = BigDecimal.valueOf(1 + (profitMarginPercentage / 100));
             this.suggestedSalesPrice = unitCost.multiply(margin).setScale(2, RoundingMode.HALF_UP);
         }
 
-        // 3. Final Price Logic
+        // 3. Lógica de Precio Final Minorista
         if (Boolean.FALSE.equals(useManualPrice) || finalSalesPrice == null) {
             this.finalSalesPrice = this.suggestedSalesPrice;
         }
-    }
 
+        // 4. Validación de seguridad para Mayorista
+        if (wholesaleQuantityThreshold == null || wholesaleQuantityThreshold <= 0) {
+            this.wholesaleQuantityThreshold = 1; // Por defecto mínimo 1 si no se define
+        }
+    }
 }

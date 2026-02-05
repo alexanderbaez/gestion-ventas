@@ -8,14 +8,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
-public class SaleServiceImpl implements SaleService{
-
+public class SaleServiceImpl implements SaleService {
 
     @Autowired
     private ProductRepository productRepository;
+
     @Autowired
     private SaleRepository saleRepository;
 
@@ -31,14 +32,32 @@ public class SaleServiceImpl implements SaleService{
             throw new RuntimeException("Insufficient stock for product: " + product.getName());
         }
 
-        // 3. Descontar el stock
+        // 3. Lógica de Precio Mayorista vs Minorista
+        // Si el producto tiene precio mayorista y la cantidad supera el umbral, aplicamos ese precio.
+        BigDecimal unitPriceToApply = product.getFinalSalesPrice();
+
+        if (product.getWholesalePrice() != null &&
+                product.getWholesaleQuantityThreshold() != null &&
+                sale.getQuantity() >= product.getWholesaleQuantityThreshold()) {
+
+            unitPriceToApply = product.getWholesalePrice();
+        }
+
+        // 4. Descontar el stock
         product.setCurrentStock(product.getCurrentStock() - sale.getQuantity());
         productRepository.save(product);
 
-        // 4. Asociar el producto completo a la venta para que el @PrePersist de Sale tenga los datos
+        // 5. Preparar los datos de la venta
         sale.setProduct(product);
 
-        // 5. Guardar la venta
+        /* Nota: Aunque Sale tiene @PrePersist, recalculamos aquí o nos aseguramos
+           de que el precio aplicado sea el correcto según la lógica mayorista.
+           Seteamos el total usando el precio que decidimos arriba.
+        */
+        BigDecimal totalAmount = unitPriceToApply.multiply(BigDecimal.valueOf(sale.getQuantity()));
+        sale.setTotalSaleAmount(totalAmount);
+
+        // 6. Guardar la venta
         return saleRepository.save(sale);
     }
 
@@ -48,7 +67,7 @@ public class SaleServiceImpl implements SaleService{
         return saleRepository.findAll();
     }
 
-
+    @Override
     @Transactional
     public void deleteSale(Long id) {
         Sale sale = saleRepository.findById(id)

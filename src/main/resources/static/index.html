@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión de Ventas</title>
+    <title>Gestión de Ventas | Bella Afrodita</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
@@ -30,7 +30,7 @@
         /* Buscador Moderno & Mobile Friendly */
         .search-group { position: relative; }
         .search-group .bi-search { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #aaa; z-index: 5; }
-        .search-input { padding-left: 40px !important; border-radius: 10px !important; border: 1px solid #ddd; height: 50px; font-size: 16px !important; } /* 16px evita el zoom automático en iPhone */
+        .search-input { padding-left: 40px !important; border-radius: 10px !important; border: 1px solid #ddd; height: 50px; font-size: 16px !important; }
 
         #productResults { top: 55px; left: 0; border-radius: 12px; overflow: hidden; border: 1px solid #ddd; z-index: 2000; width: 100%; background: white; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
         .list-group-item-action { cursor: pointer; border: none; padding: 15px; border-bottom: 1px solid #eee; -webkit-tap-highlight-color: transparent; }
@@ -177,20 +177,47 @@
             <div class="modal-body p-4">
                 <form id="productForm">
                     <input type="hidden" id="p-id">
-                    <div class="mb-3"><label class="form-label small fw-bold">Nombre del Producto</label><input type="text" id="p-name" class="form-control" required></div>
-                    <div class="row g-2 mb-3">
-                        <div class="col-6"><label class="form-label small fw-bold">Costo Pack</label><input type="number" id="p-packCost" class="form-control" step="0.01" required></div>
-                        <div class="col-6"><label class="form-label small fw-bold">Unidades</label><input type="number" id="p-units" class="form-control" required></div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Nombre del Producto</label>
+                        <input type="text" id="p-name" class="form-control" required>
                     </div>
                     <div class="row g-2 mb-3">
-                        <div class="col-6"><label class="form-label small fw-bold text-success">% Margen</label><input type="number" id="p-margin" class="form-control" value="50"></div>
-                        <div class="col-6"><label class="form-label small fw-bold text-danger">Stock</label><input type="number" id="p-stock" class="form-control" required></div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Costo Pack</label>
+                            <input type="number" id="p-packCost" class="form-control" step="0.01" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Unidades x Pack</label>
+                            <input type="number" id="p-units" class="form-control" required>
+                        </div>
                     </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-success">% Margen Minorista</label>
+                            <input type="number" id="p-margin" class="form-control" value="50">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-danger">Stock Actual</label>
+                            <input type="number" id="p-stock" class="form-control" required>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-3 p-2 rounded" style="background-color: #f0f9ff; border: 1px dashed #0ea5e9;">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-primary">Precio Mayorista</label>
+                            <input type="number" id="p-wholesalePrice" class="form-control" step="0.01" placeholder="0.00">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-primary">Mín. Mayorista</label>
+                            <input type="number" id="p-wholesaleThreshold" class="form-control" placeholder="Ej: 6">
+                        </div>
+                    </div>
+
                     <div class="p-3 bg-light rounded text-center border mb-3">
-                        <small class="text-muted d-block">PRECIO DE VENTA SUGERIDO</small>
+                        <small class="text-muted d-block">PRECIO MINORISTA SUGERIDO</small>
                         <span id="live-sale-price" class="fw-bold h4 text-success">$0.00</span>
                     </div>
-                    <button type="submit" class="btn btn-primary w-100 btn-lg fw-bold">GUARDAR</button>
+                    <button type="submit" class="btn btn-primary w-100 btn-lg fw-bold">GUARDAR PRODUCTO</button>
                 </form>
             </div>
         </div>

@@ -11,7 +11,7 @@ document.addEventListener("DOMContentLoaded", () => {
     loadProducts();
     loadSales();
 
-    // EVENTOS DE BÚSQUEDA (El secreto para el móvil es el evento 'input')
+    // EVENTOS DE BÚSQUEDA
     const searchInput = document.getElementById("saleSearchProduct");
     searchInput.addEventListener("input", filterSaleResults);
 
@@ -37,7 +37,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 
-// --- LÓGICA DEL BUSCADOR (FIX MÓVIL) ---
+// --- LÓGICA DEL BUSCADOR ---
 function filterSaleResults() {
     const query = document.getElementById("saleSearchProduct").value.toLowerCase();
     const resultsDiv = document.getElementById("productResults");
@@ -62,7 +62,6 @@ function filterSaleResults() {
                 </div>
                 <span class="badge bg-primary">$${p.finalSalesPrice.toFixed(2)}</span>
             `;
-            // Usamos 'mousedown' para que el clic sea más rápido en móviles
             btn.addEventListener("mousedown", () => selectProduct(p));
             resultsDiv.appendChild(btn);
         });
@@ -145,7 +144,8 @@ document.getElementById("saleForm").addEventListener("submit", async (e) => {
             await loadProducts();
             loadSales();
         } else {
-            Swal.fire("Error", "No hay stock suficiente", "error");
+            const errorMsg = await res.text();
+            Swal.fire("Error", errorMsg || "No hay stock suficiente", "error");
         }
     } catch (e) { console.error(e); }
 });
@@ -215,6 +215,10 @@ function editProduct(p) {
     document.getElementById("p-units").value = p.unitsPerPack;
     document.getElementById("p-margin").value = p.profitMarginPercentage;
     document.getElementById("p-stock").value = p.currentStock;
+    // Campos Mayoristas
+    document.getElementById("p-wholesalePrice").value = p.wholesalePrice || "";
+    document.getElementById("p-wholesaleThreshold").value = p.wholesaleQuantityThreshold || "";
+
     document.getElementById("modalTitle").innerText = "Editar Producto";
     liveCalc();
     myModal.show();
@@ -223,26 +227,37 @@ function editProduct(p) {
 document.getElementById("productForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const id = document.getElementById("p-id").value;
+
     const data = {
         name: document.getElementById("p-name").value,
         packCost: parseFloat(document.getElementById("p-packCost").value),
         unitsPerPack: parseInt(document.getElementById("p-units").value),
         profitMarginPercentage: parseFloat(document.getElementById("p-margin").value),
-        currentStock: parseInt(document.getElementById("p-stock").value)
+        currentStock: parseInt(document.getElementById("p-stock").value),
+        // Nuevos campos mayoristas
+        wholesalePrice: parseFloat(document.getElementById("p-wholesalePrice").value) || null,
+        wholesaleQuantityThreshold: parseInt(document.getElementById("p-wholesaleThreshold").value) || null
     };
+
     const method = id ? 'PUT' : 'POST';
     const url = id ? `${API_URL}/products/${id}` : `${API_URL}/products`;
 
-    const res = await fetch(url, {
-        method,
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(data)
-    });
+    try {
+        const res = await fetch(url, {
+            method,
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
 
-    if(res.ok) {
-        myModal.hide();
-        loadProducts();
-        Swal.fire("Guardado", "Cambios aplicados", "success");
+        if(res.ok) {
+            myModal.hide();
+            loadProducts();
+            Swal.fire("Guardado", "Cambios aplicados correctamente", "success");
+        } else {
+            Swal.fire("Error", "No se pudo guardar el producto", "error");
+        }
+    } catch (error) {
+        console.error("Error al guardar:", error);
     }
 });
 
