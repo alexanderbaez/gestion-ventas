@@ -88,44 +88,55 @@ async function loadProducts() {
 function renderTable() {
     const table = document.getElementById("inventoryTableBody");
     table.innerHTML = "";
+
     allProducts.forEach(p => {
-        // Definimos las alertas de stock
+        // Lógica de alertas de stock (lo mantenemos igual)
         const rowClass = p.currentStock <= 2 ? "fila-critica" : (p.currentStock <= 5 ? "fila-advertencia" : "");
         const badgeClass = p.currentStock <= 2 ? "stock-critical" : (p.currentStock <= 5 ? "stock-warning" : "bg-light text-dark");
 
-        // LÓGICA DE PRECIO MAYORISTA:
-        // Si el precio existe y es mayor a 0, lo mostramos en AZUL. Si no, avisamos que no tiene.
-        const tieneMayorista = p.wholesalePrice && p.wholesalePrice > 0;
-        const wholesaleHTML = tieneMayorista
-            ? `<div class="fw-bold" style="color: #0ea5e9;">$${p.wholesalePrice.toFixed(2)}</div>
-               <small class="text-muted" style="font-size: 0.7rem;">Llevando ${p.wholesaleQuantityThreshold}+ u.</small>`
-            : `<span class="text-muted" style="font-size: 0.8rem;">Sin precio x mayor</span>`;
+        // --- PRECIO MINORISTA (Rosa) ---
+        const precioMin = p.finalSalesPrice ? `$${p.finalSalesPrice.toFixed(2)}` : "$0.00";
+
+        // --- PRECIO MAYORISTA (Azul) ---
+        // Si es null o 0, mostramos un aviso elegante para que sepas que falta cargar
+        const tieneMayorista = p.wholesalePrice !== null && p.wholesalePrice > 0;
+        const precioMay = tieneMayorista
+            ? `<span class="fw-bold" style="color: #0284c7;">$${p.wholesalePrice.toFixed(2)}</span>`
+            : `<span class="text-muted" style="font-size: 0.8rem; font-style: italic;">No asignado</span>`;
+
+        const infoMay = tieneMayorista
+            ? `<div style="font-size: 0.7rem; color: #0369a1;">Mín: ${p.wholesaleQuantityThreshold} unidades</div>`
+            : "";
 
         table.innerHTML += `
             <tr class="${rowClass}">
                 <td class="ps-4 text-start">
-                    <div class="fw-bold" style="color: #334155;">${p.name}</div>
-                    <small class="text-muted">Ref: #${p.id}</small>
+                    <div class="fw-bold" style="color: #1e293b; font-size: 0.95rem;">${p.name}</div>
+                    <small class="text-muted" style="font-size: 0.7rem;">ID: #${p.id}</small>
                 </td>
+
                 <td>
-                    <span class="badge ${badgeClass}" style="padding: 8px 12px; border-radius: 8px;">
-                        ${p.currentStock}
-                    </span>
+                    <span class="badge ${badgeClass}" style="min-width: 40px; padding: 8px;">${p.currentStock}</span>
                 </td>
-                <td>
-                    <div class="fw-bold" style="color: #db2777;">$${p.finalSalesPrice.toFixed(2)}</div>
-                    <small class="text-muted" style="font-size: 0.7rem;">Minorista</small>
+
+                <td style="background-color: #fff1f2; border-left: 2px solid #fb7185;">
+                    <div class="fw-bold" style="color: #be123c;">${precioMin}</div>
+                    <div style="font-size: 0.7rem; color: #fb7185; font-weight: bold; text-transform: uppercase;">Minorista</div>
                 </td>
-                <td>
-                    ${wholesaleHTML}
+
+                <td style="background-color: #f0f9ff; border-left: 2px solid #7dd3fc;">
+                    ${precioMay}
+                    ${infoMay}
+                    ${!tieneMayorista ? '<div style="font-size: 0.7rem; color: #7dd3fc; font-weight: bold; text-transform: uppercase;">Mayorista</div>' : ''}
                 </td>
+
                 <td class="text-end pe-4">
                     <div class="d-flex justify-content-end gap-2">
                         <button class="btn-action btn-edit" onclick='editProduct(${JSON.stringify(p)})'>
-                            <i class="bi bi-pencil"></i>
+                            <i class="bi bi-pencil-fill"></i>
                         </button>
                         <button class="btn-action btn-delete" onclick="askDelete(${p.id}, 'product')">
-                            <i class="bi bi-trash"></i>
+                            <i class="bi bi-trash-fill"></i>
                         </button>
                     </div>
                 </td>
@@ -234,6 +245,8 @@ function editProduct(p) {
     document.getElementById("p-units").value = p.unitsPerPack;
     document.getElementById("p-margin").value = p.profitMarginPercentage;
     document.getElementById("p-stock").value = p.currentStock;
+
+    // CORRECCIÓN AQUÍ: Los nombres deben ser iguales a los de tu objeto Java
     document.getElementById("p-wholesalePrice").value = p.wholesalePrice || "";
     document.getElementById("p-wholesaleThreshold").value = p.wholesaleQuantityThreshold || "";
 
@@ -252,8 +265,9 @@ document.getElementById("productForm").addEventListener("submit", async (e) => {
         unitsPerPack: parseInt(document.getElementById("p-units").value),
         profitMarginPercentage: parseFloat(document.getElementById("p-margin").value),
         currentStock: parseInt(document.getElementById("p-stock").value),
-        wholesalePrice: parseFloat(document.getElementById("p-wholesalePrice").value) || null,
-        wholesaleQuantityThreshold: parseInt(document.getElementById("p-wholesaleThreshold").value) || null
+        // Aseguramos el mapeo exacto a Java
+        wholesalePrice: document.getElementById("p-wholesalePrice").value !== "" ? parseFloat(document.getElementById("p-wholesalePrice").value) : null,
+        wholesaleQuantityThreshold: document.getElementById("p-wholesaleThreshold").value !== "" ? parseInt(document.getElementById("p-wholesaleThreshold").value) : null
     };
 
     const method = id ? 'PUT' : 'POST';
@@ -268,7 +282,7 @@ document.getElementById("productForm").addEventListener("submit", async (e) => {
 
         if(res.ok) {
             myModal.hide();
-            loadProducts();
+            await loadProducts(); // Recargamos la lista
             Swal.fire("Guardado", "Cambios aplicados correctamente", "success");
         } else {
             Swal.fire("Error", "No se pudo guardar el producto", "error");
