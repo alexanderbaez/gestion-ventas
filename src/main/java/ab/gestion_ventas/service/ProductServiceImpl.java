@@ -46,6 +46,12 @@ public class ProductServiceImpl implements ProductService{
             product.setProfitMarginPercentage(productDetails.getProfitMarginPercentage());
             product.setUseManualPrice(productDetails.getUseManualPrice());
             product.setFinalSalesPrice(productDetails.getFinalSalesPrice());
+
+            // --- ESTO ES LO QUE TE FALTABA ---
+            product.setWholesalePrice(productDetails.getWholesalePrice());
+            product.setWholesaleQuantityThreshold(productDetails.getWholesaleQuantityThreshold());
+            // ---------------------------------
+
             return productRepository.save(product);
         }).orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
     }
