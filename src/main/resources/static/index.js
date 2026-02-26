@@ -83,7 +83,17 @@ function toggleHistorial(tipo) {
     if (tipo === 'ventas') {
         if(btnVentas) { btnVentas.classList.add("active", "btn-primary"); btnVentas.classList.remove("btn-light"); }
         if(btnCompras) { btnCompras.classList.remove("active", "btn-primary"); btnCompras.classList.add("btn-light"); }
-        header.innerHTML = `<tr><th class="ps-4">Fecha</th><th>Producto</th><th>Cant.</th><th>Monto</th><th class="text-end pe-4">Acción</th></tr>`;
+        // AGREGADAS COLUMNAS DE REPOSICIÓN Y GANANCIA
+        header.innerHTML = `
+            <tr>
+                <th class="ps-4">Fecha</th>
+                <th>Producto</th>
+                <th>Cant.</th>
+                <th>Reponer (Inversión)</th>
+                <th>Ganancia Neta</th>
+                <th>Total Cobrado</th>
+                <th class="text-end pe-4">Acción</th>
+            </tr>`;
         loadSales();
     } else {
         if(btnCompras) { btnCompras.classList.add("active", "btn-primary"); btnCompras.classList.remove("btn-light"); }
@@ -104,11 +114,18 @@ async function loadSales() {
     const table = document.getElementById("historyTableBody");
     table.innerHTML = "";
     sales.reverse().forEach(s => {
+        // Marcamos si fue por mayor para que sea elegante
+        const badgeMayor = s.isWholesale ? '<span class="badge bg-info text-dark ms-1" style="font-size: 10px;">MAYOR</span>' : '';
+
         table.innerHTML += `
             <tr>
                 <td class="ps-4">${new Date(s.saleDate).toLocaleDateString()}</td>
-                <td><div class="fw-bold">${s.product ? s.product.name : 'Eliminado'}</div></td>
+                <td>
+                    <div class="fw-bold">${s.product ? s.product.name : 'Eliminado'} ${badgeMayor}</div>
+                </td>
                 <td>${s.quantity}</td>
+                <td class="text-muted fw-semibold">$${(s.totalReinvestment || 0).toFixed(2)}</td>
+                <td class="text-primary fw-bold">$${(s.totalProfit || 0).toFixed(2)}</td>
                 <td class="text-success fw-bold">$${(s.totalSaleAmount || 0).toFixed(2)}</td>
                 <td class="text-end pe-4">
                     <button class="btn btn-sm btn-outline-danger" onclick="askDelete(${s.id}, 'sale')">

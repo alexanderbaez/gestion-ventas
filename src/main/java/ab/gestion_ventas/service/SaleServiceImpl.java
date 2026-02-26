@@ -23,39 +23,45 @@ public class SaleServiceImpl implements SaleService {
     @Override
     @Transactional
     public Sale createSale(Sale sale) {
+        // 1. Buscamos el producto fresco de la DB para tener el costo real
         Product product = productRepository.findById(sale.getProduct().getId())
-                .orElseThrow(() -> new RuntimeException("Product not found"));
+                .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
 
         if (product.getCurrentStock() < sale.getQuantity()) {
             throw new RuntimeException("Stock insuficiente");
         }
 
-        // 1. Decidir qué precio aplicar
+        // 2. Decidir precio (Minorista o Mayorista)
         BigDecimal unitPrice = product.getFinalSalesPrice();
         boolean wholesaleApplied = false;
 
         if (product.getWholesalePrice() != null &&
                 product.getWholesaleQuantityThreshold() != null &&
                 sale.getQuantity() >= product.getWholesaleQuantityThreshold()) {
-
             unitPrice = product.getWholesalePrice();
             wholesaleApplied = true;
         }
 
-        // 2. Calcular montos
+        // 3. LA LÓGICA CONTABLE (Aquí está el truco)
+        // totalAmount: Lo que el cliente te paga (ej. 5000)
         BigDecimal totalAmount = unitPrice.multiply(BigDecimal.valueOf(sale.getQuantity()));
-        BigDecimal costAmount = product.getUnitCost().multiply(BigDecimal.valueOf(sale.getQuantity()));
-        BigDecimal profitAmount = totalAmount.subtract(costAmount);
 
-        // 3. Seteamos los datos en el objeto Sale
+        // totalReinvestment: Lo que a vos te costó (ej. 2000) -> VA A RECAUDACIÓN
+        BigDecimal costPerUnit = product.getUnitCost(); // ¡Asegurate que este campo no sea 0 en la DB!
+        BigDecimal totalCost = costPerUnit.multiply(BigDecimal.valueOf(sale.getQuantity()));
+
+        // totalProfit: Tu ganancia pura (ej. 3000) -> VA A GANANCIA NETA
+        BigDecimal profitAmount = totalAmount.subtract(totalCost);
+
+        // 4. Guardamos los datos separados
         sale.setProduct(product);
         sale.setAppliedPrice(unitPrice);
         sale.setTotalSaleAmount(totalAmount);
-        sale.setTotalReinvestment(costAmount);
-        sale.setTotalProfit(profitAmount);
+        sale.setTotalReinvestment(totalCost); // Esto es lo que recuperas
+        sale.setTotalProfit(profitAmount);    // Esto es lo que ganás
         sale.setIsWholesale(wholesaleApplied);
 
-        // 4. Descontar stock y guardar
+        // 5. Descontar stock
         product.setCurrentStock(product.getCurrentStock() - sale.getQuantity());
         productRepository.save(product);
 
