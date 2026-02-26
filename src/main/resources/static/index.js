@@ -55,22 +55,39 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 
-// --- SISTEMA DE BALANCE ---
+// --- SISTEMA DE BALANCE ACTUALIZADO ---
 async function updateBalance() {
     try {
         const res = await fetch(`${API_URL}/balance/current`);
         if(!res.ok) return;
         const data = await res.json();
 
-        // "3 mil" -> Ganancia Neta
-        document.getElementById("net-balance").innerText = `$${(data.netBalance || 0).toLocaleString()}`;
+        // 1. Ganancia Neta (Tu utilidad pura)
+        const netBalanceElem = document.getElementById("net-balance");
+        netBalanceElem.innerText = `$${(data.netBalance || 0).toLocaleString()}`;
+        netBalanceElem.classList.add("text-primary", "fw-bold"); // Siempre en azul profesional
 
-        // "2 mil" -> Recaudación (lo que recuperaste para reinvertir)
-        document.getElementById("total-recap").innerText = `$${(data.totalSales || 0).toLocaleString()}`;
+        // 2. Recaudación (Dinero para reponer mercadería)
+        const recapElem = document.getElementById("total-recap");
+        const availableRecap = data.totalSales || 0;
+        recapElem.innerText = `$${availableRecap.toLocaleString()}`;
 
+        // Lógica de colores para la Recaudación:
+        if (availableRecap < 0) {
+            recapElem.classList.remove("text-success");
+            recapElem.classList.add("text-danger", "fw-bold"); // Rojo si debes dinero a la caja
+        } else {
+            recapElem.classList.remove("text-danger");
+            recapElem.classList.add("text-success", "fw-bold"); // Verde si tienes dinero para comprar
+        }
+
+        // 3. Egresos y Cantidad de Ventas
         document.getElementById("total-expenses").innerText = `$${(data.totalExpenses || 0).toLocaleString()}`;
         document.getElementById("sales-count").innerText = data.salesCount || "0";
-    } catch (e) { console.error(e); }
+
+    } catch (e) {
+        console.error("Error al actualizar el balance de Bella Afrodita:", e);
+    }
 }
 
 // --- HISTORIAL DINÁMICO (VENTAS / COMPRAS) ---

@@ -26,35 +26,40 @@ public class BalanceServiceImpl implements BalanceService {
 
     @Override
     public MonthlyBalanceDTO getCurrentMonthBalance() {
+        // Rango de fechas: Desde el primer día del mes hasta el último segundo de hoy
         LocalDateTime start = LocalDateTime.now().withDayOfMonth(1).with(LocalTime.MIN);
         LocalDateTime end = LocalDateTime.now().with(LocalTime.MAX);
 
         List<Sale> sales = saleRepository.findBySaleDateBetween(start, end);
         List<SupplyOrder> orders = supplyOrderRepository.findByOrderDateBetween(start, end);
 
-        // 1. GANANCIA NETA (Los 3 mil de tu ejemplo)
-        // Es la suma de la utilidad pura de cada venta
-        BigDecimal netBalance = sales.stream()
-                .map(Sale::getTotalProfit)
+        // 1. DINERO RECUPERADO (Lo que destinamos a reposición en cada venta)
+        // Ejemplo: Si vendiste a 5000 y costó 2000, sumamos los 2000.
+        BigDecimal recoveredCapital = sales.stream()
+                .map(s -> s.getTotalReinvestment() != null ? s.getTotalReinvestment() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // 2. RECAUDACIÓN / REINVERSIÓN (Los 2 mil de tu ejemplo)
-        // Es el costo de la mercadería que vendiste (lo que recuperas para volver a comprar)
-        BigDecimal totalSales = sales.stream()
-                .map(Sale::getTotalReinvestment)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        // 3. EGRESOS PROV. (Lo que efectivamente pagaste al proveedor este mes)
+        // 2. EGRESOS TOTALES (Lo que efectivamente pagaste a proveedores)
         BigDecimal totalExpenses = orders.stream()
-                .map(SupplyOrder::getTotalCost)
+                .map(o -> o.getTotalCost() != null ? o.getTotalCost() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // 3. RECAUDACIÓN DISPONIBLE (Capital Recuperado - Compras Realizadas)
+        // Aquí es donde ocurre el descuento: si tenías 47.633 y gastaste 19.000, quedará en 28.633.
+        BigDecimal availableRecap = recoveredCapital.subtract(totalExpenses);
+
+        // 4. GANANCIA NETA (Tu utilidad pura)
+        // Este número es sagrado y no se ve afectado por las compras al proveedor.
+        BigDecimal netProfit = sales.stream()
+                .map(s -> s.getTotalProfit() != null ? s.getTotalProfit() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         return MonthlyBalanceDTO.builder()
                 .monthName(LocalDateTime.now().getMonth().getDisplayName(TextStyle.FULL, new Locale("es", "ES")))
-                .totalSales(totalSales) // Aquí irán los "2 mil" (Recuperación de costo)
-                .totalProfit(netBalance) // Dato extra
-                .totalExpenses(totalExpenses) // Compras a proveedores
-                .netBalance(netBalance) // Aquí irán los "3 mil" (Ganancia pura)
+                .totalSales(availableRecap) // Se muestra en el Dashboard como "Recaudación"
+                .totalProfit(netProfit)    // Se usa para estadísticas internas
+                .totalExpenses(totalExpenses)
+                .netBalance(netProfit)     // Se muestra en el Dashboard como "Ganancia Neta"
                 .salesCount(sales.size())
                 .build();
     }
