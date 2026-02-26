@@ -62,13 +62,15 @@ async function updateBalance() {
         if(!res.ok) return;
         const data = await res.json();
 
-        // Sincronización con las tarjetas del Dashboard
-        document.getElementById("month-name").innerText = (data.monthName || "MES").toUpperCase();
+        // "3 mil" -> Ganancia Neta
         document.getElementById("net-balance").innerText = `$${(data.netBalance || 0).toLocaleString()}`;
+
+        // "2 mil" -> Recaudación (lo que recuperaste para reinvertir)
         document.getElementById("total-recap").innerText = `$${(data.totalSales || 0).toLocaleString()}`;
+
         document.getElementById("total-expenses").innerText = `$${(data.totalExpenses || 0).toLocaleString()}`;
         document.getElementById("sales-count").innerText = data.salesCount || "0";
-    } catch (e) { console.error("Error cargando balance:", e); }
+    } catch (e) { console.error(e); }
 }
 
 // --- HISTORIAL DINÁMICO (VENTAS / COMPRAS) ---

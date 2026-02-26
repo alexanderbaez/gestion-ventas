@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.TextStyle;
 import java.util.List;
 import java.util.Locale;
@@ -25,37 +26,35 @@ public class BalanceServiceImpl implements BalanceService {
 
     @Override
     public MonthlyBalanceDTO getCurrentMonthBalance() {
-        LocalDateTime start = LocalDateTime.now().withDayOfMonth(1).withHour(0).withMinute(0);
-        LocalDateTime end = LocalDateTime.now().withHour(23).withMinute(59);
+        LocalDateTime start = LocalDateTime.now().withDayOfMonth(1).with(LocalTime.MIN);
+        LocalDateTime end = LocalDateTime.now().with(LocalTime.MAX);
 
         List<Sale> sales = saleRepository.findBySaleDateBetween(start, end);
         List<SupplyOrder> orders = supplyOrderRepository.findByOrderDateBetween(start, end);
 
-        // Total que entró por ventas (Precio de venta * cantidad)
+        // 1. GANANCIA NETA (Los 3 mil de tu ejemplo)
+        // Es la suma de la utilidad pura de cada venta
+        BigDecimal netBalance = sales.stream()
+                .map(Sale::getTotalProfit)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // 2. RECAUDACIÓN / REINVERSIÓN (Los 2 mil de tu ejemplo)
+        // Es el costo de la mercadería que vendiste (lo que recuperas para volver a comprar)
         BigDecimal totalSales = sales.stream()
-                .map(Sale::getTotalSaleAmount)
+                .map(Sale::getTotalReinvestment)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // Ganancia bruta de esas ventas
-        BigDecimal totalProfit = sales.stream()
-                .map(Sale::getTotalProfit) // Esto ya viene calculado como (Venta - Costo)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        // Total pagado a proveedores (Egresos)
+        // 3. EGRESOS PROV. (Lo que efectivamente pagaste al proveedor este mes)
         BigDecimal totalExpenses = orders.stream()
                 .map(SupplyOrder::getTotalCost)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // BALANCE NETO: Recaudación total de ventas MENOS los pagos a proveedores
-        // Esto te dice cuánto dinero real tienes después de reponer mercadería
-        BigDecimal netBalance = totalSales.subtract(totalExpenses);
-
         return MonthlyBalanceDTO.builder()
                 .monthName(LocalDateTime.now().getMonth().getDisplayName(TextStyle.FULL, new Locale("es", "ES")))
-                .totalSales(totalSales)
-                .totalProfit(totalProfit) // Mantenemos este dato para estadísticas
-                .totalExpenses(totalExpenses)
-                .netBalance(netBalance) // Este valor ahora refleja Recaudación - Compras
+                .totalSales(totalSales) // Aquí irán los "2 mil" (Recuperación de costo)
+                .totalProfit(netBalance) // Dato extra
+                .totalExpenses(totalExpenses) // Compras a proveedores
+                .netBalance(netBalance) // Aquí irán los "3 mil" (Ganancia pura)
                 .salesCount(sales.size())
                 .build();
     }
