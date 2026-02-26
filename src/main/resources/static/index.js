@@ -4,15 +4,19 @@ let deleteTarget = { id: null, type: null };
 let allProducts = [];
 
 document.addEventListener("DOMContentLoaded", () => {
-    myModal = new bootstrap.Modal(document.getElementById('modalProducto'));
-    confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
+    // Inicialización de Modales con validación para evitar errores
+    const modalEl = document.getElementById('modalProducto');
+    const confirmEl = document.getElementById('confirmModal');
 
-    // Carga inicial
+    if (modalEl) myModal = new bootstrap.Modal(modalEl);
+    if (confirmEl) confirmModal = new bootstrap.Modal(confirmEl);
+
+    // Carga inicial de datos
     loadProducts();
     loadSales();
     updateBalance();
 
-    // Buscadores
+    // Configuración de Buscadores
     const searchInput = document.getElementById("saleSearchProduct");
     if(searchInput) searchInput.addEventListener("input", filterSaleResults);
 
@@ -22,7 +26,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const purchaseSearch = document.getElementById("purchaseSearchProduct");
     if(purchaseSearch) purchaseSearch.addEventListener("input", filterPurchaseResults);
 
-    // Escuchadores de cálculo y ventas
+    // Escuchadores de cálculo dinámico en el modal
     const productInputs = ["p-packCost", "p-units", "p-margin"];
     productInputs.forEach(id => {
         const el = document.getElementById(id);
@@ -32,58 +36,69 @@ document.addEventListener("DOMContentLoaded", () => {
     const qtyInput = document.getElementById("quantity");
     if(qtyInput) qtyInput.addEventListener("input", checkWholesalePriceInSale);
 
-    document.getElementById("btnConfirmDelete").addEventListener("click", executeDelete);
+    const btnConfirmDel = document.getElementById("btnConfirmDelete");
+    if(btnConfirmDel) btnConfirmDel.addEventListener("click", executeDelete);
 
-    // Formularios
-    document.getElementById("saleForm").addEventListener("submit", handleSaleSubmit);
+    // Manejo de Formularios
+    const saleForm = document.getElementById("saleForm");
+    if(saleForm) saleForm.addEventListener("submit", handleSaleSubmit);
+
     const pForm = document.getElementById("purchaseForm");
     if(pForm) pForm.addEventListener("submit", handlePurchaseSubmit);
 
-    // Cerrar resultados al hacer click fuera
+    const prodForm = document.getElementById("productForm");
+    if(prodForm) prodForm.addEventListener("submit", handleProductFormSubmit);
+
+    // Cerrar listas de resultados al hacer click fuera
     document.addEventListener("click", (e) => {
         if (!e.target.closest(".search-group")) {
-            document.getElementById("productResults").classList.add("d-none");
-            const pRes = document.getElementById("purchaseProductResults");
-            if(pRes) pRes.classList.add("d-none");
+            const resSale = document.getElementById("productResults");
+            const resPur = document.getElementById("purchaseProductResults");
+            if(resSale) resSale.classList.add("d-none");
+            if(resPur) resPur.classList.add("d-none");
         }
     });
 });
 
-// --- LÓGICA DE BALANCE MENSUAL (CON IDs CORRECTOS) ---
+// --- LÓGICA DE BALANCE MENSUAL ---
 async function updateBalance() {
     try {
         const res = await fetch(`${API_URL}/balance/current`);
-        if(!res.ok) return;
+        if(!res.ok) throw new Error("Error en la respuesta del balance");
         const data = await res.json();
 
-        // Mapeo exacto a los IDs del nuevo HTML
+        // Actualización de los indicadores superiores
         const mName = document.getElementById("month-name");
-        if(mName) mName.innerText = data.monthName || "Mes";
+        if(mName) mName.innerText = data.monthName || "Mes Actual";
 
         const netBal = document.getElementById("net-balance");
-        if(netBal) netBal.innerText = `$${data.netBalance.toLocaleString()}`;
+        if(netBal) netBal.innerText = `$${(data.netBalance || 0).toLocaleString()}`;
 
         const recap = document.getElementById("total-recap");
-        if(recap) recap.innerText = `$${data.totalSales.toLocaleString()}`;
+        if(recap) recap.innerText = `$${(data.totalSales || 0).toLocaleString()}`;
 
         const exp = document.getElementById("total-expenses");
-        if(exp) exp.innerText = `$${data.totalExpenses.toLocaleString()}`;
+        if(exp) exp.innerText = `$${(data.totalExpenses || 0).toLocaleString()}`;
 
         const sCount = document.getElementById("sales-count");
         if(sCount) sCount.innerText = data.salesCount || "0";
 
-    } catch (e) { console.error("Error balance:", e); }
+    } catch (e) {
+        console.error("Error al actualizar el balance:", e);
+    }
 }
 
 // --- LÓGICA DE VENTAS ---
-
 function filterSaleResults() {
     const query = document.getElementById("saleSearchProduct").value.toLowerCase();
     const resultsDiv = document.getElementById("productResults");
+    if (!resultsDiv) return;
+
     if (query.length < 1) { resultsDiv.classList.add("d-none"); return; }
 
     const matches = allProducts.filter(p => p.name.toLowerCase().includes(query));
     resultsDiv.innerHTML = "";
+
     matches.forEach(p => {
         const btn = document.createElement("button");
         btn.type = "button";
@@ -93,33 +108,45 @@ function filterSaleResults() {
                 <div class="fw-bold">${p.name}</div>
                 <small class="text-muted">Stock: ${p.currentStock}</small>
             </div>
-            <span class="badge bg-primary">$${p.finalSalesPrice.toFixed(2)}</span>
+            <span class="badge bg-primary">$${(p.finalSalesPrice || 0).toFixed(2)}</span>
         `;
+        // Usamos mousedown para que se ejecute antes del blur del input
         btn.addEventListener("mousedown", () => selectProduct(p));
         resultsDiv.appendChild(btn);
     });
-    resultsDiv.classList.remove("d-none");
+
+    if (matches.length > 0) resultsDiv.classList.remove("d-none");
+    else resultsDiv.classList.add("d-none");
 }
 
 function selectProduct(p) {
-    document.getElementById("productSelect").value = p.id;
-    document.getElementById("saleSearchProduct").value = p.name;
-    document.getElementById("productResults").classList.add("d-none");
-    const label = document.getElementById("selectedProductLabel");
-    label.classList.remove("d-none");
+    const inputId = document.getElementById("productSelect");
+    const inputSearch = document.getElementById("saleSearchProduct");
+    const labelDiv = document.getElementById("selectedProductLabel");
+
+    if(inputId) inputId.value = p.id;
+    if(inputSearch) inputSearch.value = p.name;
+
+    const resultsDiv = document.getElementById("productResults");
+    if(resultsDiv) resultsDiv.classList.add("d-none");
+
+    if(labelDiv) labelDiv.classList.remove("d-none");
     checkWholesalePriceInSale();
 }
 
 function checkWholesalePriceInSale() {
-    const productId = document.getElementById("productSelect").value;
-    const qty = parseInt(document.getElementById("quantity").value) || 0;
+    const productId = document.getElementById("productSelect")?.value;
+    const qtyInput = document.getElementById("quantity");
+    const qty = parseInt(qtyInput?.value) || 0;
     const label = document.getElementById("currentSelectionName");
-    if (!productId) return;
+
+    if (!productId || !label) return;
+
     const p = allProducts.find(prod => prod.id == productId);
     if (p && p.wholesalePrice && qty >= p.wholesaleQuantityThreshold) {
         label.innerHTML = `${p.name} <span class="badge bg-info text-dark">¡MAYORISTA: $${p.wholesalePrice.toFixed(2)}!</span>`;
     } else if (p) {
-        label.innerText = `${p.name} ($${p.finalSalesPrice.toFixed(2)})`;
+        label.innerText = `${p.name} ($${(p.finalSalesPrice || 0).toFixed(2)})`;
     }
 }
 
@@ -127,7 +154,8 @@ async function handleSaleSubmit(e) {
     e.preventDefault();
     const productId = document.getElementById("productSelect").value;
     const qty = document.getElementById("quantity").value;
-    if(!productId) return Swal.fire("Aviso", "Selecciona un producto", "info");
+
+    if(!productId) return Swal.fire("Aviso", "Selecciona un producto de la lista", "info");
 
     try {
         const res = await fetch(`${API_URL}/sales`, {
@@ -135,37 +163,42 @@ async function handleSaleSubmit(e) {
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ product: { id: parseInt(productId) }, quantity: parseInt(qty) })
         });
+
         if(res.ok) {
             Swal.fire({ icon: 'success', title: 'Venta realizada', timer: 1500, showConfirmButton: false });
             e.target.reset();
-            document.getElementById("selectedProductLabel").classList.add("d-none");
+            const label = document.getElementById("selectedProductLabel");
+            if(label) label.classList.add("d-none");
             document.getElementById("productSelect").value = "";
+
             await loadProducts();
-            loadSales();
+            await loadSales();
             updateBalance();
         } else {
             const errorMsg = await res.text();
-            Swal.fire("Error", errorMsg || "No hay stock", "error");
+            Swal.fire("Error", errorMsg || "No hay stock suficiente", "error");
         }
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error("Error en handleSaleSubmit:", e); }
 }
 
 async function loadSales() {
     try {
         const res = await fetch(`${API_URL}/sales`);
+        if(!res.ok) return;
         const sales = await res.json();
         const table = document.getElementById("historyTableBody");
         if(!table) return;
 
         table.innerHTML = "";
-        sales.forEach(s => {
-            const badgeMay = s.isWholesale ? `<span class="badge bg-info text-dark ms-1">MAYORISTA</span>` : "";
+        // Invertimos para ver las últimas primero
+        sales.reverse().forEach(s => {
+            const badgeMay = s.isWholesale ? `<span class="badge bg-info text-dark ms-1" style="font-size: 0.7rem;">MAYORISTA</span>` : "";
             table.innerHTML += `
                 <tr>
                     <td class="ps-4">${new Date(s.saleDate).toLocaleDateString()}</td>
-                    <td><div class="fw-bold">${s.product ? s.product.name : 'Eliminado'}</div>${badgeMay}</td>
+                    <td><div class="fw-bold">${s.product ? s.product.name : 'Producto Eliminado'}</div>${badgeMay}</td>
                     <td>${s.quantity}</td>
-                    <td class="text-success fw-bold">$${s.totalPrice.toFixed(2)}</td>
+                    <td class="text-success fw-bold">$${(s.totalPrice || 0).toFixed(2)}</td>
                     <td class="text-end pe-4">
                         <button class="btn btn-sm btn-outline-danger" onclick="askDelete(${s.id}, 'sale')">
                             <i class="bi bi-trash"></i>
@@ -173,23 +206,25 @@ async function loadSales() {
                     </td>
                 </tr>`;
         });
-        updateBalance();
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error("Error en loadSales:", e); }
 }
 
-// --- LÓGICA DE COMPRAS ---
-
+// --- LÓGICA DE COMPRAS (EGRESOS) ---
 function filterPurchaseResults() {
     const query = document.getElementById("purchaseSearchProduct").value.toLowerCase();
     const resultsDiv = document.getElementById("purchaseProductResults");
+    if (!resultsDiv) return;
+
     if (query.length < 1) { resultsDiv.classList.add("d-none"); return; }
+
     const matches = allProducts.filter(p => p.name.toLowerCase().includes(query));
     resultsDiv.innerHTML = "";
+
     matches.forEach(p => {
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = "list-group-item list-group-item-action";
-        btn.innerHTML = `<b>${p.name}</b> <small>(Stock: ${p.currentStock})</small>`;
+        btn.innerHTML = `<b>${p.name}</b> <small>(Stock actual: ${p.currentStock})</small>`;
         btn.onclick = () => {
             document.getElementById("purchaseProductSelect").value = p.id;
             document.getElementById("purchaseSearchProduct").value = p.name;
@@ -202,11 +237,15 @@ function filterPurchaseResults() {
 
 async function handlePurchaseSubmit(e) {
     e.preventDefault();
+    const prodId = document.getElementById("purchaseProductSelect").value;
+    if(!prodId) return Swal.fire("Atención", "Selecciona un producto para la compra", "warning");
+
     const data = {
-        product: { id: parseInt(document.getElementById("purchaseProductSelect").value) },
+        product: { id: parseInt(prodId) },
         quantityPacks: parseInt(document.getElementById("purchasePacks").value),
         totalCost: parseFloat(document.getElementById("purchaseTotalCost").value)
     };
+
     try {
         const res = await fetch(`${API_URL}/supply-orders`, {
             method: 'POST',
@@ -214,28 +253,30 @@ async function handlePurchaseSubmit(e) {
             body: JSON.stringify(data)
         });
         if(res.ok) {
-            Swal.fire("Compra Registrada", "Stock actualizado", "success");
+            Swal.fire("Compra Registrada", "El stock ha sido actualizado", "success");
             e.target.reset();
-            loadProducts();
+            document.getElementById("purchaseProductSelect").value = "";
+            await loadProducts();
             updateBalance();
         }
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error("Error en handlePurchaseSubmit:", e); }
 }
 
 // --- LÓGICA DE INVENTARIO ---
-
 async function loadProducts() {
     try {
         const res = await fetch(`${API_URL}/products`);
+        if(!res.ok) return;
         allProducts = await res.json();
         renderTable();
-    } catch (e) { console.error("Error cargando productos", e); }
+    } catch (e) { console.error("Error cargando productos:", e); }
 }
 
 function renderTable() {
     const table = document.getElementById("inventoryTableBody");
     if(!table) return;
     table.innerHTML = "";
+
     allProducts.forEach(p => {
         const rowClass = p.currentStock <= 2 ? "fila-critica" : (p.currentStock <= 5 ? "fila-advertencia" : "");
         const badgeClass = p.currentStock <= 2 ? "stock-critical" : (p.currentStock <= 5 ? "stock-warning" : "bg-light text-dark");
@@ -244,29 +285,75 @@ function renderTable() {
 
         table.innerHTML += `
             <tr class="${rowClass}">
-                <td class="ps-4 text-start"><div class="fw-bold">${p.name}</div><small class="text-muted">ID: #${p.id}</small></td>
-                <td><span class="badge ${badgeClass}" style="padding: 8px;">${p.currentStock}</span></td>
+                <td class="ps-4 text-start">
+                    <div class="fw-bold">${p.name}</div>
+                    <small class="text-muted">ID: #${p.id}</small>
+                </td>
+                <td><span class="badge ${badgeClass}" style="padding: 8px; min-width: 35px;">${p.currentStock}</span></td>
                 <td><div class="txt-minorista">${precioMin}</div></td>
-                <td><div class="${tieneMay ? 'txt-mayorista' : 'text-muted'}">${tieneMay ? '$'+p.wholesalePrice.toFixed(2) : 'No asignado'}</div></td>
+                <td><div class="${tieneMay ? 'txt-mayorista' : 'text-muted'}">${tieneMay ? '$'+p.wholesalePrice.toFixed(2) : '---'}</div></td>
                 <td class="text-end pe-4">
-                    <button class="btn-action" onclick='editProduct(${JSON.stringify(p)})'><i class="bi bi-pencil-fill"></i></button>
-                    <button class="btn-action text-danger" onclick="askDelete(${p.id}, 'product')"><i class="bi bi-trash-fill"></i></button>
+                    <button class="btn-action me-1" onclick='editProduct(${JSON.stringify(p)})'>
+                        <i class="bi bi-pencil-fill"></i>
+                    </button>
+                    <button class="btn-action text-danger" onclick="askDelete(${p.id}, 'product')">
+                        <i class="bi bi-trash-fill"></i>
+                    </button>
                 </td>
             </tr>`;
     });
 }
 
+async function handleProductFormSubmit(e) {
+    e.preventDefault();
+    const id = document.getElementById("p-id").value;
+    const data = {
+        name: document.getElementById("p-name").value,
+        packCost: parseFloat(document.getElementById("p-packCost").value),
+        unitsPerPack: parseInt(document.getElementById("p-units").value),
+        profitMarginPercentage: parseFloat(document.getElementById("p-margin").value),
+        currentStock: parseInt(document.getElementById("p-stock").value),
+        wholesalePrice: document.getElementById("p-wholesalePrice").value !== "" ? parseFloat(document.getElementById("p-wholesalePrice").value) : null,
+        wholesaleQuantityThreshold: document.getElementById("p-wholesaleThreshold").value !== "" ? parseInt(document.getElementById("p-wholesaleThreshold").value) : null
+    };
+
+    const method = id ? 'PUT' : 'POST';
+    const url = id ? `${API_URL}/products/${id}` : `${API_URL}/products`;
+
+    try {
+        const res = await fetch(url, {
+            method,
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        if(res.ok) {
+            myModal.hide();
+            await loadProducts();
+            updateBalance();
+            Swal.fire("Éxito", "Producto guardado correctamente", "success");
+        } else {
+            Swal.fire("Error", "No se pudo guardar el producto", "error");
+        }
+    } catch (e) { console.error("Error al guardar producto:", e); }
+}
+
 function liveCalc() {
-    const cost = parseFloat(document.getElementById("p-packCost").value) || 0;
-    const units = parseInt(document.getElementById("p-units").value) || 0;
-    const margin = parseFloat(document.getElementById("p-margin").value) || 0;
+    // Esta función precalcula el precio en el modal para ayudar al usuario
+    const cost = parseFloat(document.getElementById("p-packCost")?.value) || 0;
+    const units = parseInt(document.getElementById("p-units")?.value) || 0;
+    const margin = parseFloat(document.getElementById("p-margin")?.value) || 0;
+
     const unitCost = units > 0 ? cost / units : 0;
     const price = unitCost * (1 + (margin / 100));
-    // No hay elemento 'live-sale-price' en este HTML, pero se mantiene la lógica si existiera
+
+    // Si tienes un pequeño span de previsualización en el modal, se vería aquí
+    const preview = document.getElementById("live-price-preview");
+    if(preview) preview.innerText = `Sugerido: $${price.toFixed(2)}`;
 }
 
 function openCreateModal() {
-    document.getElementById("productForm").reset();
+    const form = document.getElementById("productForm");
+    if(form) form.reset();
     document.getElementById("p-id").value = "";
     document.getElementById("modalTitle").innerText = "Nuevo Producto";
     myModal.show();
@@ -285,52 +372,49 @@ function editProduct(p) {
     myModal.show();
 }
 
-document.getElementById("productForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const id = document.getElementById("p-id").value;
-    const data = {
-        name: document.getElementById("p-name").value,
-        packCost: parseFloat(document.getElementById("p-packCost").value),
-        unitsPerPack: parseInt(document.getElementById("p-units").value),
-        profitMarginPercentage: parseFloat(document.getElementById("p-margin").value),
-        currentStock: parseInt(document.getElementById("p-stock").value),
-        wholesalePrice: document.getElementById("p-wholesalePrice").value !== "" ? parseFloat(document.getElementById("p-wholesalePrice").value) : null,
-        wholesaleQuantityThreshold: document.getElementById("p-wholesaleThreshold").value !== "" ? parseInt(document.getElementById("p-wholesaleThreshold").value) : null
-    };
-    const method = id ? 'PUT' : 'POST';
-    const url = id ? `${API_URL}/products/${id}` : `${API_URL}/products`;
-    try {
-        const res = await fetch(url, { method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
-        if(res.ok) { myModal.hide(); await loadProducts(); updateBalance(); Swal.fire("Éxito", "Producto guardado", "success"); }
-    } catch (e) { console.error(e); }
-});
-
 // --- UTILIDADES ---
-
 function filterInventory() {
     const q = document.getElementById("searchInventory").value.toLowerCase();
     const rows = document.querySelectorAll("#inventoryTableBody tr");
-    rows.forEach(r => r.style.display = r.cells[0].innerText.toLowerCase().includes(q) ? "" : "none");
+    rows.forEach(r => {
+        const text = r.cells[0].innerText.toLowerCase();
+        r.style.display = text.includes(q) ? "" : "none";
+    });
 }
 
 function showSection(id) {
     document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
-    document.getElementById(`link-${id}`).classList.add('active');
+
+    const targetSection = document.getElementById(id);
+    const targetLink = document.getElementById(`link-${id}`);
+
+    if(targetSection) targetSection.classList.add('active');
+    if(targetLink) targetLink.classList.add('active');
 }
 
 function askDelete(id, type) {
     deleteTarget = { id, type };
-    document.getElementById("confirmText").innerText = type === 'product' ? 'Se eliminará el producto.' : 'Se anulará la venta y volverá el stock.';
+    const textEl = document.getElementById("confirmText");
+    if(textEl) {
+        textEl.innerText = type === 'product'
+            ? 'Se eliminará el producto del inventario permanentemente.'
+            : 'Se anulará la venta y el stock regresará al inventario.';
+    }
     confirmModal.show();
 }
 
 async function executeDelete() {
     const path = deleteTarget.type === 'product' ? 'products' : 'sales';
-    await fetch(`${API_URL}/${path}/${deleteTarget.id}`, { method: 'DELETE' });
-    confirmModal.hide();
-    await loadProducts();
-    await loadSales();
-    updateBalance();
+    try {
+        const res = await fetch(`${API_URL}/${path}/${deleteTarget.id}`, { method: 'DELETE' });
+        if(res.ok) {
+            confirmModal.hide();
+            await loadProducts();
+            await loadSales();
+            updateBalance();
+        } else {
+            Swal.fire("Error", "No se pudo realizar la eliminación", "error");
+        }
+    } catch (e) { console.error("Error al eliminar:", e); }
 }
