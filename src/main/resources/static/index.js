@@ -7,223 +7,131 @@ document.addEventListener("DOMContentLoaded", () => {
     myModal = new bootstrap.Modal(document.getElementById('modalProducto'));
     confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
 
-    loadProducts();
-    loadSales();
+    initApp();
 
-    const searchInput = document.getElementById("saleSearchProduct");
-    searchInput.addEventListener("input", filterSaleResults);
+    // Buscadores
+    document.getElementById("saleSearchProduct").addEventListener("input", (e) => filterResults(e.target.value, "productResults", selectProduct));
+    document.getElementById("purchaseSearchProduct").addEventListener("input", (e) => filterResults(e.target.value, "purchaseProductResults", selectProductForPurchase));
 
-    const inventorySearch = document.getElementById("searchInventory");
-    inventorySearch.addEventListener("input", filterInventory);
-
-    const salesSearch = document.getElementById("searchSales");
-    salesSearch.addEventListener("input", filterSalesHistory);
-
-    document.getElementById("filterDate").addEventListener("change", loadSales);
-
-    // Escuchador para cálculos en vivo en el modal de producto
-    const productInputs = ["p-packCost", "p-units", "p-margin"];
-    productInputs.forEach(id => document.getElementById(id).addEventListener("input", liveCalc));
-
-    // Escuchador para detectar precio mayorista en vivo durante la venta
+    // Cálculos y eventos
     document.getElementById("quantity").addEventListener("input", checkWholesalePriceInSale);
-
+    ["p-packCost", "p-units", "p-margin"].forEach(id => document.getElementById(id).addEventListener("input", liveCalc));
     document.getElementById("btnConfirmDelete").addEventListener("click", executeDelete);
 
+    // Forms
+    document.getElementById("saleForm").addEventListener("submit", handleSale);
+    document.getElementById("purchaseForm").addEventListener("submit", handlePurchase);
+
     document.addEventListener("click", (e) => {
-        if (!e.target.closest(".search-group")) {
-            document.getElementById("productResults").classList.add("d-none");
+        if (!e.target.closest(".search-group") && !e.target.closest("#purchaseForm")) {
+            document.querySelectorAll(".list-group").forEach(el => el.classList.add("d-none"));
         }
     });
 });
 
+async function initApp() {
+    await loadProducts();
+    await updateBalance();
+}
+
+// --- BALANCE MENSUAL (PROFESIONAL) ---
+async function updateBalance() {
+    try {
+        const res = await fetch(`${API_URL}/balance/current`);
+        const data = await res.json();
+        document.getElementById("month-name").innerText = data.monthName.toUpperCase();
+        document.getElementById("net-balance").innerText = `$${data.netBalance.toLocaleString()}`;
+        document.getElementById("total-recap").innerText = `$${data.totalSales.toLocaleString()}`;
+        document.getElementById("total-expenses").innerText = `$${data.totalExpenses.toLocaleString()}`;
+        document.getElementById("sales-count").innerText = data.salesCount;
+    } catch (e) { console.error("Error balance:", e); }
+}
+
 // --- LÓGICA DE VENTAS ---
-
-function filterSaleResults() {
-    const query = document.getElementById("saleSearchProduct").value.toLowerCase();
-    const resultsDiv = document.getElementById("productResults");
-
-    if (query.length < 1) {
-        resultsDiv.classList.add("d-none");
-        return;
-    }
-
-    const matches = allProducts.filter(p => p.name.toLowerCase().includes(query));
-
+function filterResults(query, divId, selectFn) {
+    const resultsDiv = document.getElementById(divId);
+    if (query.length < 1) { resultsDiv.classList.add("d-none"); return; }
+    const matches = allProducts.filter(p => p.name.toLowerCase().includes(query.toLowerCase()));
     resultsDiv.innerHTML = "";
-    if (matches.length > 0) {
-        matches.forEach(p => {
-            const btn = document.createElement("button");
-            btn.type = "button";
-            btn.className = "list-group-item list-group-item-action d-flex justify-content-between align-items-center";
-            btn.innerHTML = `
-                <div class="text-start">
-                    <div class="fw-bold">${p.name}</div>
-                    <small class="text-muted">Stock: ${p.currentStock}</small>
-                </div>
-                <span class="badge bg-primary">$${p.finalSalesPrice.toFixed(2)}</span>
-            `;
-            btn.addEventListener("mousedown", () => selectProduct(p));
-            resultsDiv.appendChild(btn);
-        });
-        resultsDiv.classList.remove("d-none");
-    } else {
-        resultsDiv.classList.add("d-none");
-    }
+    matches.forEach(p => {
+        const btn = document.createElement("button");
+        btn.className = "list-group-item list-group-item-action d-flex justify-content-between";
+        btn.innerHTML = `<b>${p.name}</b> <span class="badge bg-secondary">Stock: ${p.currentStock}</span>`;
+        btn.onclick = () => selectFn(p);
+        resultsDiv.appendChild(btn);
+    });
+    resultsDiv.classList.remove("d-none");
 }
 
 function selectProduct(p) {
     document.getElementById("productSelect").value = p.id;
     document.getElementById("saleSearchProduct").value = p.name;
     document.getElementById("productResults").classList.add("d-none");
-
-    const label = document.getElementById("selectedProductLabel");
-    label.classList.remove("d-none");
-    checkWholesalePriceInSale(); // Validar precio según cantidad actual
+    document.getElementById("selectedProductLabel").classList.remove("d-none");
+    checkWholesalePriceInSale();
 }
 
-// Función para avisar visualmente si aplica precio mayorista en el formulario de venta
-function checkWholesalePriceInSale() {
-    const productId = document.getElementById("productSelect").value;
-    const qty = parseInt(document.getElementById("quantity").value) || 0;
-    const label = document.getElementById("currentSelectionName");
+async function handleSale(e) {
+    e.preventDefault();
+    const data = { product: { id: parseInt(document.getElementById("productSelect").value) }, quantity: parseInt(document.getElementById("quantity").value) };
+    const res = await fetch(`${API_URL}/sales`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
+    if(res.ok) {
+        Swal.fire("Venta Exitosa", "", "success");
+        e.target.reset();
+        initApp();
+    } else { Swal.fire("Error", "Sin stock o problema de conexión", "error"); }
+}
 
-    if (!productId) return;
+// --- LÓGICA DE COMPRAS (EGRESOS) ---
+function selectProductForPurchase(p) {
+    document.getElementById("purchaseProductSelect").value = p.id;
+    document.getElementById("purchaseSearchProduct").value = p.name;
+    document.getElementById("purchaseProductResults").classList.add("d-none");
+}
 
-    const p = allProducts.find(prod => prod.id == productId);
-    if (p && p.wholesalePrice && qty >= p.wholesaleQuantityThreshold) {
-        label.innerHTML = `${p.name} <span class="badge bg-info text-dark">¡APLICA MAYORISTA: $${p.wholesalePrice.toFixed(2)}!</span>`;
-    } else if (p) {
-        label.innerText = `${p.name} ($${p.finalSalesPrice.toFixed(2)})`;
+async function handlePurchase(e) {
+    e.preventDefault();
+    const data = {
+        product: { id: parseInt(document.getElementById("purchaseProductSelect").value) },
+        quantityPacks: parseInt(document.getElementById("purchasePacks").value),
+        totalCost: parseFloat(document.getElementById("purchaseTotalCost").value)
+    };
+    const res = await fetch(`${API_URL}/supply-orders`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
+    if(res.ok) {
+        Swal.fire("Compra Registrada", "Stock actualizado y egreso anotado", "success");
+        e.target.reset();
+        initApp();
     }
 }
 
-document.getElementById("saleForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const productId = document.getElementById("productSelect").value;
-    const qty = document.getElementById("quantity").value;
-
-    if(!productId) return Swal.fire("Aviso", "Busca y selecciona un producto", "info");
-
-    try {
-        const res = await fetch(`${API_URL}/sales`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ product: { id: parseInt(productId) }, quantity: parseInt(qty) })
-        });
-
-        if(res.ok) {
-            Swal.fire({ icon: 'success', title: 'Venta realizada', timer: 1500, showConfirmButton: false });
-            e.target.reset();
-            document.getElementById("selectedProductLabel").classList.add("d-none");
-            document.getElementById("productSelect").value = "";
-            await loadProducts();
-            loadSales();
-        } else {
-            const errorMsg = await res.text();
-            Swal.fire("Error", errorMsg || "No hay stock suficiente", "error");
-        }
-    } catch (e) { console.error(e); }
-});
-
-async function loadSales() {
-    const date = document.getElementById("filterDate").value;
-    try {
-        const res = await fetch(`${API_URL}/sales`);
-        let sales = await res.json();
-        if(date) sales = sales.filter(s => s.saleDate.includes(date));
-
-        const table = document.getElementById("salesTableBody");
-        let profit = 0, capital = 0;
-        table.innerHTML = "";
-
-        sales.forEach(s => {
-            profit += s.totalProfit;
-            capital += s.totalReinvestment;
-
-            const badgeMay = s.isWholesale
-                ? `<span class="badge bg-info text-dark ms-1" style="font-size: 0.6rem;">MAYORISTA</span>`
-                : "";
-
-            table.innerHTML += `
-                <tr>
-                    <td class="ps-4">${new Date(s.saleDate).toLocaleDateString()}</td>
-                    <td>
-                        <div class="fw-bold">${s.product ? s.product.name : 'Eliminado'}</div>
-                        ${badgeMay}
-                    </td>
-                    <td>${s.quantity}</td>
-                    <td class="text-success fw-bold">$${s.totalProfit.toFixed(2)}</td>
-                    <td class="text-end pe-4">
-                        <button class="btn btn-sm btn-outline-danger" onclick="askDelete(${s.id}, 'sale')"><i class="bi bi-x-lg"></i></button>
-                    </td>
-                </tr>`;
-        });
-        document.getElementById("total-profit").innerText = `$${profit.toLocaleString()}`;
-        document.getElementById("total-reinvestment").innerText = `$${capital.toLocaleString()}`;
-    } catch (e) { console.error(e); }
-}
-
-// --- LÓGICA DE INVENTARIO ---
-
+// --- INVENTARIO Y OTROS ---
 async function loadProducts() {
-    try {
-        const res = await fetch(`${API_URL}/products`);
-        allProducts = await res.json();
-        renderTable();
-    } catch (e) { console.error("Error cargando productos", e); }
-}
-
-function renderTable() {
+    const res = await fetch(`${API_URL}/products`);
+    allProducts = await res.json();
     const table = document.getElementById("inventoryTableBody");
     table.innerHTML = "";
-
     allProducts.forEach(p => {
         const rowClass = p.currentStock <= 2 ? "fila-critica" : (p.currentStock <= 5 ? "fila-advertencia" : "");
-        const badgeClass = p.currentStock <= 2 ? "stock-critical" : (p.currentStock <= 5 ? "stock-warning" : "bg-light text-dark");
-
-        const precioMin = p.finalSalesPrice ? `$${p.finalSalesPrice.toFixed(2)}` : "$0.00";
-        const tieneMayorista = p.wholesalePrice !== null && p.wholesalePrice > 0;
-
-        const precioMay = tieneMayorista
-            ? `<span class="fw-bold" style="color: #0284c7;">$${p.wholesalePrice.toFixed(2)}</span>`
-            : `<span class="text-muted" style="font-size: 0.8rem; font-style: italic;">No asignado</span>`;
-
-        const infoMay = tieneMayorista
-            ? `<div style="font-size: 0.7rem; color: #0369a1;">Mín: ${p.wholesaleQuantityThreshold} unidades</div>`
-            : "";
-
-        table.innerHTML += `
-            <tr class="${rowClass}">
-                <td class="ps-4 text-start">
-                    <div class="fw-bold" style="color: #1e293b; font-size: 0.95rem;">${p.name}</div>
-                    <small class="text-muted" style="font-size: 0.7rem;">ID: #${p.id}</small>
-                </td>
-                <td>
-                    <span class="badge ${badgeClass}" style="min-width: 40px; padding: 8px;">${p.currentStock}</span>
-                </td>
-                <td style="background-color: #fff1f2; border-left: 2px solid #fb7185;">
-                    <div class="fw-bold" style="color: #be123c;">${precioMin}</div>
-                    <div style="font-size: 0.7rem; color: #fb7185; font-weight: bold; text-transform: uppercase;">Minorista</div>
-                </td>
-                <td style="background-color: #f0f9ff; border-left: 2px solid #7dd3fc;">
-                    ${precioMay}
-                    ${infoMay}
-                    ${!tieneMayorista ? '<div style="font-size: 0.7rem; color: #7dd3fc; font-weight: bold; text-transform: uppercase;">Mayorista</div>' : ''}
-                </td>
-                <td class="text-end pe-4">
-                    <div class="d-flex justify-content-end gap-2">
-                        <button class="btn-action btn-edit" onclick='editProduct(${JSON.stringify(p)})'>
-                            <i class="bi bi-pencil-fill"></i>
-                        </button>
-                        <button class="btn-action btn-delete" onclick="askDelete(${p.id}, 'product')">
-                            <i class="bi bi-trash-fill"></i>
-                        </button>
-                    </div>
-                </td>
-            </tr>`;
+        table.innerHTML += `<tr class="${rowClass}">
+            <td>${p.name}</td>
+            <td><span class="badge ${p.currentStock <= 2 ? 'bg-danger' : 'bg-dark'}">${p.currentStock}</span></td>
+            <td class="txt-minorista">$${p.finalSalesPrice.toFixed(2)}</td>
+            <td class="txt-mayorista">$${p.wholesalePrice ? p.wholesalePrice.toFixed(2) : '-'}</td>
+            <td>
+                <button class="btn-action btn-edit" onclick='editProduct(${JSON.stringify(p)})'><i class="bi bi-pencil"></i></button>
+            </td>
+        </tr>`;
     });
 }
+
+function showSection(id) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    document.getElementById(`link-${id}`).classList.add('active');
+}
+
+// (Mantenemos las funciones liveCalc, openCreateModal y editProduct que ya tenías)
 
 function liveCalc() {
     const cost = parseFloat(document.getElementById("p-packCost").value) || 0;
