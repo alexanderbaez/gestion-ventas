@@ -10,66 +10,72 @@ document.addEventListener("DOMContentLoaded", () => {
     // Carga inicial
     loadProducts();
     loadSales();
-    updateBalance(); // Nueva función profesional
+    updateBalance();
 
-    // Buscadores originales
+    // Buscadores
     const searchInput = document.getElementById("saleSearchProduct");
-    searchInput.addEventListener("input", filterSaleResults);
+    if(searchInput) searchInput.addEventListener("input", filterSaleResults);
 
     const inventorySearch = document.getElementById("searchInventory");
-    inventorySearch.addEventListener("input", filterInventory);
+    if(inventorySearch) inventorySearch.addEventListener("input", filterInventory);
 
-    const salesSearch = document.getElementById("searchSales");
-    salesSearch.addEventListener("input", filterSalesHistory);
-
-    // Buscador nuevo para Compras
     const purchaseSearch = document.getElementById("purchaseSearchProduct");
     if(purchaseSearch) purchaseSearch.addEventListener("input", filterPurchaseResults);
 
-    document.getElementById("filterDate").addEventListener("change", loadSales);
-
-    // Escuchadores originales
+    // Escuchadores de cálculo y ventas
     const productInputs = ["p-packCost", "p-units", "p-margin"];
-    productInputs.forEach(id => document.getElementById(id).addEventListener("input", liveCalc));
+    productInputs.forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.addEventListener("input", liveCalc);
+    });
 
-    document.getElementById("quantity").addEventListener("input", checkWholesalePriceInSale);
+    const qtyInput = document.getElementById("quantity");
+    if(qtyInput) qtyInput.addEventListener("input", checkWholesalePriceInSale);
+
     document.getElementById("btnConfirmDelete").addEventListener("click", executeDelete);
 
-    // Forms
+    // Formularios
     document.getElementById("saleForm").addEventListener("submit", handleSaleSubmit);
-    const purchaseForm = document.getElementById("purchaseForm");
-    if(purchaseForm) purchaseForm.addEventListener("submit", handlePurchaseSubmit);
+    const pForm = document.getElementById("purchaseForm");
+    if(pForm) pForm.addEventListener("submit", handlePurchaseSubmit);
 
+    // Cerrar resultados al hacer click fuera
     document.addEventListener("click", (e) => {
-        if (!e.target.closest(".search-group") && !e.target.closest("#compras")) {
+        if (!e.target.closest(".search-group")) {
             document.getElementById("productResults").classList.add("d-none");
-            const purRes = document.getElementById("purchaseProductResults");
-            if(purRes) purRes.classList.add("d-none");
+            const pRes = document.getElementById("purchaseProductResults");
+            if(pRes) pRes.classList.add("d-none");
         }
     });
 });
 
-// --- LÓGICA DE BALANCE MENSUAL ---
+// --- LÓGICA DE BALANCE MENSUAL (CON IDs CORRECTOS) ---
 async function updateBalance() {
     try {
         const res = await fetch(`${API_URL}/balance/current`);
         if(!res.ok) return;
         const data = await res.json();
 
-        // Mapeo a tus IDs de la interfaz
-        const monthEl = document.getElementById("month-name");
-        if(monthEl) monthEl.innerText = data.monthName.toUpperCase();
+        // Mapeo exacto a los IDs del nuevo HTML
+        const mName = document.getElementById("month-name");
+        if(mName) mName.innerText = data.monthName || "Mes";
 
-        document.getElementById("total-profit").innerText = `$${data.netBalance.toLocaleString()}`;
-        document.getElementById("total-reinvestment").innerText = `$${data.totalSales.toLocaleString()}`;
+        const netBal = document.getElementById("net-balance");
+        if(netBal) netBal.innerText = `$${data.netBalance.toLocaleString()}`;
 
-        // Si agregaste los nuevos campos de la versión anterior:
-        const expEl = document.getElementById("total-expenses");
-        if(expEl) expEl.innerText = `$${data.totalExpenses.toLocaleString()}`;
+        const recap = document.getElementById("total-recap");
+        if(recap) recap.innerText = `$${data.totalSales.toLocaleString()}`;
+
+        const exp = document.getElementById("total-expenses");
+        if(exp) exp.innerText = `$${data.totalExpenses.toLocaleString()}`;
+
+        const sCount = document.getElementById("sales-count");
+        if(sCount) sCount.innerText = data.salesCount || "0";
+
     } catch (e) { console.error("Error balance:", e); }
 }
 
-// --- LÓGICA DE VENTAS (MANTENIDA 100%) ---
+// --- LÓGICA DE VENTAS ---
 
 function filterSaleResults() {
     const query = document.getElementById("saleSearchProduct").value.toLowerCase();
@@ -78,23 +84,21 @@ function filterSaleResults() {
 
     const matches = allProducts.filter(p => p.name.toLowerCase().includes(query));
     resultsDiv.innerHTML = "";
-    if (matches.length > 0) {
-        matches.forEach(p => {
-            const btn = document.createElement("button");
-            btn.type = "button";
-            btn.className = "list-group-item list-group-item-action d-flex justify-content-between align-items-center";
-            btn.innerHTML = `
-                <div class="text-start">
-                    <div class="fw-bold">${p.name}</div>
-                    <small class="text-muted">Stock: ${p.currentStock}</small>
-                </div>
-                <span class="badge bg-primary">$${p.finalSalesPrice.toFixed(2)}</span>
-            `;
-            btn.addEventListener("mousedown", () => selectProduct(p));
-            resultsDiv.appendChild(btn);
-        });
-        resultsDiv.classList.remove("d-none");
-    } else { resultsDiv.classList.add("d-none"); }
+    matches.forEach(p => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "list-group-item list-group-item-action d-flex justify-content-between align-items-center";
+        btn.innerHTML = `
+            <div class="text-start">
+                <div class="fw-bold">${p.name}</div>
+                <small class="text-muted">Stock: ${p.currentStock}</small>
+            </div>
+            <span class="badge bg-primary">$${p.finalSalesPrice.toFixed(2)}</span>
+        `;
+        btn.addEventListener("mousedown", () => selectProduct(p));
+        resultsDiv.appendChild(btn);
+    });
+    resultsDiv.classList.remove("d-none");
 }
 
 function selectProduct(p) {
@@ -113,7 +117,7 @@ function checkWholesalePriceInSale() {
     if (!productId) return;
     const p = allProducts.find(prod => prod.id == productId);
     if (p && p.wholesalePrice && qty >= p.wholesaleQuantityThreshold) {
-        label.innerHTML = `${p.name} <span class="badge bg-info text-dark">¡APLICA MAYORISTA: $${p.wholesalePrice.toFixed(2)}!</span>`;
+        label.innerHTML = `${p.name} <span class="badge bg-info text-dark">¡MAYORISTA: $${p.wholesalePrice.toFixed(2)}!</span>`;
     } else if (p) {
         label.innerText = `${p.name} ($${p.finalSalesPrice.toFixed(2)})`;
     }
@@ -123,7 +127,7 @@ async function handleSaleSubmit(e) {
     e.preventDefault();
     const productId = document.getElementById("productSelect").value;
     const qty = document.getElementById("quantity").value;
-    if(!productId) return Swal.fire("Aviso", "Busca y selecciona un producto", "info");
+    if(!productId) return Swal.fire("Aviso", "Selecciona un producto", "info");
 
     try {
         const res = await fetch(`${API_URL}/sales`, {
@@ -141,35 +145,39 @@ async function handleSaleSubmit(e) {
             updateBalance();
         } else {
             const errorMsg = await res.text();
-            Swal.fire("Error", errorMsg || "No hay stock suficiente", "error");
+            Swal.fire("Error", errorMsg || "No hay stock", "error");
         }
     } catch (e) { console.error(e); }
 }
 
 async function loadSales() {
-    const date = document.getElementById("filterDate").value;
     try {
         const res = await fetch(`${API_URL}/sales`);
-        let sales = await res.json();
-        if(date) sales = sales.filter(s => s.saleDate.includes(date));
-        const table = document.getElementById("salesTableBody");
+        const sales = await res.json();
+        const table = document.getElementById("historyTableBody");
+        if(!table) return;
+
         table.innerHTML = "";
         sales.forEach(s => {
-            const badgeMay = s.isWholesale ? `<span class="badge bg-info text-dark ms-1" style="font-size: 0.6rem;">MAYORISTA</span>` : "";
+            const badgeMay = s.isWholesale ? `<span class="badge bg-info text-dark ms-1">MAYORISTA</span>` : "";
             table.innerHTML += `
                 <tr>
                     <td class="ps-4">${new Date(s.saleDate).toLocaleDateString()}</td>
                     <td><div class="fw-bold">${s.product ? s.product.name : 'Eliminado'}</div>${badgeMay}</td>
                     <td>${s.quantity}</td>
-                    <td class="text-success fw-bold">$${s.totalProfit.toFixed(2)}</td>
-                    <td class="text-end pe-4"><button class="btn btn-sm btn-outline-danger" onclick="askDelete(${s.id}, 'sale')"><i class="bi bi-x-lg"></i></button></td>
+                    <td class="text-success fw-bold">$${s.totalPrice.toFixed(2)}</td>
+                    <td class="text-end pe-4">
+                        <button class="btn btn-sm btn-outline-danger" onclick="askDelete(${s.id}, 'sale')">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
                 </tr>`;
         });
-        updateBalance(); // Recalcula los cuadros de arriba
+        updateBalance();
     } catch (e) { console.error(e); }
 }
 
-// --- LÓGICA DE COMPRAS (EGRESOS) ---
+// --- LÓGICA DE COMPRAS ---
 
 function filterPurchaseResults() {
     const query = document.getElementById("purchaseSearchProduct").value.toLowerCase();
@@ -214,7 +222,7 @@ async function handlePurchaseSubmit(e) {
     } catch (e) { console.error(e); }
 }
 
-// --- LÓGICA DE INVENTARIO (MANTENIDA 100%) ---
+// --- LÓGICA DE INVENTARIO ---
 
 async function loadProducts() {
     try {
@@ -226,25 +234,24 @@ async function loadProducts() {
 
 function renderTable() {
     const table = document.getElementById("inventoryTableBody");
+    if(!table) return;
     table.innerHTML = "";
     allProducts.forEach(p => {
         const rowClass = p.currentStock <= 2 ? "fila-critica" : (p.currentStock <= 5 ? "fila-advertencia" : "");
         const badgeClass = p.currentStock <= 2 ? "stock-critical" : (p.currentStock <= 5 ? "stock-warning" : "bg-light text-dark");
         const precioMin = p.finalSalesPrice ? `$${p.finalSalesPrice.toFixed(2)}` : "$0.00";
-        const tieneMayorista = p.wholesalePrice !== null && p.wholesalePrice > 0;
-        const precioMay = tieneMayorista ? `<span class="fw-bold" style="color: #0284c7;">$${p.wholesalePrice.toFixed(2)}</span>` : `<span class="text-muted" style="font-size: 0.8rem; font-style: italic;">No asignado</span>`;
-        const infoMay = tieneMayorista ? `<div style="font-size: 0.7rem; color: #0369a1;">Mín: ${p.wholesaleQuantityThreshold} unidades</div>` : "";
+        const tieneMay = p.wholesalePrice > 0;
 
         table.innerHTML += `
             <tr class="${rowClass}">
-                <td class="ps-4 text-start"><div class="fw-bold" style="color: #1e293b; font-size: 0.95rem;">${p.name}</div><small class="text-muted" style="font-size: 0.7rem;">ID: #${p.id}</small></td>
-                <td><span class="badge ${badgeClass}" style="min-width: 40px; padding: 8px;">${p.currentStock}</span></td>
-                <td style="background-color: #fff1f2; border-left: 2px solid #fb7185;"><div class="fw-bold" style="color: #be123c;">${precioMin}</div><div style="font-size: 0.7rem; color: #fb7185; font-weight: bold; text-transform: uppercase;">Minorista</div></td>
-                <td style="background-color: #f0f9ff; border-left: 2px solid #7dd3fc;">${precioMay}${infoMay}${!tieneMayorista ? '<div style="font-size: 0.7rem; color: #7dd3fc; font-weight: bold; text-transform: uppercase;">Mayorista</div>' : ''}</td>
-                <td class="text-end pe-4"><div class="d-flex justify-content-end gap-2">
-                    <button class="btn-action btn-edit" onclick='editProduct(${JSON.stringify(p)})'><i class="bi bi-pencil-fill"></i></button>
-                    <button class="btn-action btn-delete" onclick="askDelete(${p.id}, 'product')"><i class="bi bi-trash-fill"></i></button>
-                </div></td>
+                <td class="ps-4 text-start"><div class="fw-bold">${p.name}</div><small class="text-muted">ID: #${p.id}</small></td>
+                <td><span class="badge ${badgeClass}" style="padding: 8px;">${p.currentStock}</span></td>
+                <td><div class="txt-minorista">${precioMin}</div></td>
+                <td><div class="${tieneMay ? 'txt-mayorista' : 'text-muted'}">${tieneMay ? '$'+p.wholesalePrice.toFixed(2) : 'No asignado'}</div></td>
+                <td class="text-end pe-4">
+                    <button class="btn-action" onclick='editProduct(${JSON.stringify(p)})'><i class="bi bi-pencil-fill"></i></button>
+                    <button class="btn-action text-danger" onclick="askDelete(${p.id}, 'product')"><i class="bi bi-trash-fill"></i></button>
+                </td>
             </tr>`;
     });
 }
@@ -255,14 +262,13 @@ function liveCalc() {
     const margin = parseFloat(document.getElementById("p-margin").value) || 0;
     const unitCost = units > 0 ? cost / units : 0;
     const price = unitCost * (1 + (margin / 100));
-    document.getElementById("live-sale-price").innerText = `$${price.toFixed(2)}`;
+    // No hay elemento 'live-sale-price' en este HTML, pero se mantiene la lógica si existiera
 }
 
 function openCreateModal() {
     document.getElementById("productForm").reset();
     document.getElementById("p-id").value = "";
     document.getElementById("modalTitle").innerText = "Nuevo Producto";
-    liveCalc();
     myModal.show();
 }
 
@@ -276,7 +282,6 @@ function editProduct(p) {
     document.getElementById("p-wholesalePrice").value = p.wholesalePrice || "";
     document.getElementById("p-wholesaleThreshold").value = p.wholesaleQuantityThreshold || "";
     document.getElementById("modalTitle").innerText = "Editar Producto";
-    liveCalc();
     myModal.show();
 }
 
@@ -296,8 +301,8 @@ document.getElementById("productForm").addEventListener("submit", async (e) => {
     const url = id ? `${API_URL}/products/${id}` : `${API_URL}/products`;
     try {
         const res = await fetch(url, { method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
-        if(res.ok) { myModal.hide(); await loadProducts(); updateBalance(); Swal.fire("Guardado", "Cambios aplicados", "success"); }
-    } catch (error) { console.error("Error al guardar:", error); }
+        if(res.ok) { myModal.hide(); await loadProducts(); updateBalance(); Swal.fire("Éxito", "Producto guardado", "success"); }
+    } catch (e) { console.error(e); }
 });
 
 // --- UTILIDADES ---
@@ -306,12 +311,6 @@ function filterInventory() {
     const q = document.getElementById("searchInventory").value.toLowerCase();
     const rows = document.querySelectorAll("#inventoryTableBody tr");
     rows.forEach(r => r.style.display = r.cells[0].innerText.toLowerCase().includes(q) ? "" : "none");
-}
-
-function filterSalesHistory() {
-    const q = document.getElementById("searchSales").value.toLowerCase();
-    const rows = document.querySelectorAll("#salesTableBody tr");
-    rows.forEach(r => r.style.display = r.cells[1].innerText.toLowerCase().includes(q) ? "" : "none");
 }
 
 function showSection(id) {
@@ -323,7 +322,7 @@ function showSection(id) {
 
 function askDelete(id, type) {
     deleteTarget = { id, type };
-    document.getElementById("confirmText").innerText = type === 'product' ? 'Eliminarás este producto para siempre.' : 'La venta se anulará y el stock volverá.';
+    document.getElementById("confirmText").innerText = type === 'product' ? 'Se eliminará el producto.' : 'Se anulará la venta y volverá el stock.';
     confirmModal.show();
 }
 
@@ -331,7 +330,7 @@ async function executeDelete() {
     const path = deleteTarget.type === 'product' ? 'products' : 'sales';
     await fetch(`${API_URL}/${path}/${deleteTarget.id}`, { method: 'DELETE' });
     confirmModal.hide();
-    loadProducts();
-    loadSales();
+    await loadProducts();
+    await loadSales();
     updateBalance();
 }
