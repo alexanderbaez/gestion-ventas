@@ -33,8 +33,15 @@ public class SupplyOrderController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteOrder(@PathVariable Long id) {
-        supplyOrderService.deleteOrder(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<?> deleteOrder(@PathVariable Long id) {
+        try {
+            supplyOrderService.deleteOrder(id);
+            return ResponseEntity.noContent().build();
+        } catch (RuntimeException e) {
+            // Si la orden no existe o hay error de lógica, devolvemos 404 o 400
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 }

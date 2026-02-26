@@ -71,16 +71,21 @@ public class SaleServiceImpl implements SaleService {
     @Override
     @Transactional
     public void deleteSale(Long id) {
+        // 1. Buscamos la venta con todos sus datos
         Sale sale = saleRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Venta no encontrada"));
 
-        // Recuperamos el producto y devolvemos el stock
+        // 2. Recuperamos el producto asociado
         Product product = sale.getProduct();
+
+        // 3. Devolvemos el stock (con chequeo de seguridad por si el producto fue borrado antes)
         if (product != null) {
             product.setCurrentStock(product.getCurrentStock() + sale.getQuantity());
             productRepository.save(product);
         }
 
+        // 4. Eliminamos el registro de la venta
+        // Usamos delete(sale) porque ya tenemos el objeto cargado en memoria
         saleRepository.delete(sale);
     }
 }

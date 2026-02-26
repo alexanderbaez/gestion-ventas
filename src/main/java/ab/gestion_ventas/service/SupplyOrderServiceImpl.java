@@ -51,8 +51,21 @@ public class SupplyOrderServiceImpl implements SupplyOrderService {
     @Override
     @Transactional
     public void deleteOrder(Long id) {
-        // Nota: Si borras una orden, podrías decidir si restas el stock o no.
-        // Por seguridad contable, aquí solo borramos el registro.
+        // 1. Buscamos la orden antes de borrarla para saber qué producto y cuánta cantidad afectar
+        SupplyOrder order = supplyOrderRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Orden no encontrada"));
+
+        Product product = order.getProduct();
+
+        // 2. Calculamos las unidades que debemos restar
+        int unidadesARestar = order.getQuantityPacks() * product.getUnitsPerPack();
+
+        // 3. Restamos el stock (Validamos que no quede en negativo si prefieres)
+        product.setCurrentStock(product.getCurrentStock() - unidadesARestar);
+
+        productRepository.save(product);
+
+        // 4. Ahora sí, borramos el registro del egreso
         supplyOrderRepository.deleteById(id);
     }
 }
