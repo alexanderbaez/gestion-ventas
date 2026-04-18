@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión de Ventas | Bella Afrodita</title>
+    <title>Bella Afrodita | Sistema de Gestión</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
@@ -41,7 +41,7 @@
             background: white; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
         }
 
-        .btn-action { width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; transition: 0.2s; border: 1px solid #eee; background: white; }
+        .btn-action { width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; transition: 0.2s; border: 1px solid #eee; background: white; cursor: pointer; }
         .btn-action:hover { background: #f8f9fa; transform: scale(1.1); }
     </style>
 </head>
@@ -57,10 +57,10 @@
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto gap-2 mt-3 mt-lg-0 text-center">
-                <li class="nav-item"><a class="nav-link active" id="link-inicio" onclick="showSection('inicio')">Inicio</a></li>
-                <li class="nav-item"><a class="nav-link" id="link-inventario" onclick="showSection('inventario')">Inventario</a></li>
-                <li class="nav-item"><a class="nav-link" id="link-compras" onclick="showSection('compras')">Compras</a></li>
-                <li class="nav-item"><a class="nav-link" id="link-historial" onclick="showSection('historial')">Historial</a></li>
+                <li class="nav-item"><a class="nav-link active" id="link-inicio" onclick="BellaAfrodita.showSection('inicio')">Inicio</a></li>
+                <li class="nav-item"><a class="nav-link" id="link-inventario" onclick="BellaAfrodita.showSection('inventario')">Inventario</a></li>
+                <li class="nav-item"><a class="nav-link" id="link-compras" onclick="BellaAfrodita.showSection('compras')">Compras</a></li>
+                <li class="nav-item"><a class="nav-link" id="link-historial" onclick="BellaAfrodita.showSection('historial')">Historial</a></li>
             </ul>
         </div>
     </div>
@@ -151,7 +151,7 @@
                         </div>
                     </div>
                     <div class="col-12">
-                        <button type="submit" class="btn btn-dark btn-lg w-100 fw-bold mt-2" style="border-radius: 12px;">REGISTRAR COMPRA Y ACTUALIZAR STOCK</button>
+                        <button type="submit" class="btn btn-dark btn-lg w-100 fw-bold mt-2" style="border-radius: 12px;">REGISTRAR COMPRA</button>
                     </div>
                 </div>
             </form>
@@ -166,20 +166,20 @@
                     <i class="bi bi-search"></i>
                     <input type="text" id="searchInventory" class="form-control search-input" placeholder="Filtrar..." style="height: 40px; font-size: 14px !important;">
                 </div>
-                <button class="btn btn-dark fw-bold px-4" onclick="openCreateModal()" style="border-radius: 12px; white-space: nowrap;">+ NUEVO</button>
+                <button class="btn btn-dark fw-bold px-4" onclick="BellaAfrodita.openCreateModal()" style="border-radius: 12px; white-space: nowrap;">+ NUEVO</button>
             </div>
         </div>
         <div class="card p-0 overflow-hidden border-0 shadow-sm">
             <div class="table-responsive">
                 <table class="table table-hover mb-0 align-middle text-center">
                     <thead class="table-dark">
-                    <tr>
-                        <th class="text-start ps-4">PRODUCTO</th>
-                        <th>STOCK</th>
-                        <th>PRECIO MIN.</th>
-                        <th>PRECIO MAY.</th>
-                        <th class="text-end pe-4">ACCIONES</th>
-                    </tr>
+                        <tr>
+                            <th class="text-start ps-4">PRODUCTO</th>
+                            <th>STOCK</th>
+                            <th>PRECIO MIN.</th>
+                            <th>PRECIO MAY.</th>
+                            <th class="text-end pe-4">ACCIONES</th>
+                        </tr>
                     </thead>
                     <tbody id="inventoryTableBody"></tbody>
                 </table>
@@ -190,8 +190,8 @@
     <section id="historial" class="section">
         <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
             <div class="btn-group p-1 bg-white rounded-3 shadow-sm">
-                <button class="btn btn-primary active btn-sm px-4" id="btnHistorialVentas" onclick="toggleHistorial('ventas')" style="border-radius: 8px;">Ventas</button>
-                <button class="btn btn-light btn-sm px-4" id="btnHistorialCompras" onclick="toggleHistorial('compras')" style="border-radius: 8px;">Compras</button>
+                <button class="btn btn-primary active btn-sm px-4" id="btnHistorialVentas" onclick="BellaAfrodita.toggleHistorial('ventas')" style="border-radius: 8px;">Ventas</button>
+                <button class="btn btn-light btn-sm px-4" id="btnHistorialCompras" onclick="BellaAfrodita.toggleHistorial('compras')" style="border-radius: 8px;">Compras</button>
             </div>
             <div class="d-flex gap-2">
                 <input type="date" id="filterDate" class="form-control shadow-sm" style="border-radius: 10px; width: auto;">
@@ -204,8 +204,7 @@
         <div class="card p-0 overflow-hidden border-0 shadow-sm">
             <div class="table-responsive">
                 <table class="table table-hover mb-0 align-middle text-center">
-                    <thead class="table-light" id="historialHeader">
-                    </thead>
+                    <thead class="table-light" id="historialHeader"></thead>
                     <tbody id="historyTableBody"></tbody>
                 </table>
             </div>
@@ -284,8 +283,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="index.js"></script>
-<script>
-    document.getElementById('current-date').innerText = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
-</script>
+
 </body>
 </html>
